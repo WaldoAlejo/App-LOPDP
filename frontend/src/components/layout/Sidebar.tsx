@@ -1,11 +1,24 @@
 import { useState } from 'react';
-import { Menu, X, LayoutDashboard, Settings, Users, Building2, FolderTree, GitBranch, Library, FileText } from 'lucide-react';
+import {
+  Menu,
+  X,
+  LayoutDashboard,
+  Settings,
+  Users,
+  Building2,
+  FolderTree,
+  GitBranch,
+  Library,
+  FileText,
+  Gavel,
+} from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { clsx } from 'clsx';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/treatments', icon: FileText, label: 'Tratamientos' },
+  { to: '/reviews', icon: Gavel, label: 'Revisión DPO' },
   { to: '/companies', icon: Building2, label: 'Empresas' },
   { to: '/areas', icon: FolderTree, label: 'Áreas' },
   { to: '/processes', icon: GitBranch, label: 'Procesos' },

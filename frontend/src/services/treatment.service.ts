@@ -37,6 +37,9 @@ export interface Treatment {
   updatedAt: string;
   company?: { id: string; legalName: string };
   observations?: { id: string; status: string }[];
+  dataSubjects?: any[];
+  treatmentDataItems?: any[];
+  treatmentLegalBases?: any[];
   riskAssessment?: {
     usesSpecialCategories: boolean;
     involvesChildren: boolean;

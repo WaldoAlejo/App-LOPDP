@@ -33,6 +33,9 @@ model Company {
   retentionRules   RetentionRule[]
   lifecyclePhases  LifecyclePhase[]
   risks            Risk[]
+  treatments       Treatment[]
+  attachments      Attachment[]
+  audits           Audit[]
 
   @@map("companies")
 }
@@ -176,7 +179,8 @@ model DataItem {
   isSensitive    Boolean @default(false) @map("is_sensitive")
   isActive       Boolean @default(true) @map("is_active")
 
-  dataCategory DataCategory @relation(fields: [dataCategoryId], references: [id], onDelete: Cascade)
+  dataCategory     DataCategory        @relation(fields: [dataCategoryId], references: [id], onDelete: Cascade)
+  treatmentDataItems TreatmentDataItem[]
 
   @@unique([dataCategoryId, code])
   @@map("data_items")
@@ -307,4 +311,297 @@ model Risk {
 
   @@unique([companyId, code])
   @@map("risks")
+}
+
+// ==================== NÚCLEO RAT ====================
+
+model Treatment {
+  id                      String    @id @default(uuid())
+  companyId               String    @map("company_id")
+  areaId                  String    @map("area_id")
+  processId               String    @map("process_id")
+  code                    String
+  version                 Int       @default(1)
+  name                    String
+  shortDescription        String?   @map("short_description")
+  mainPurpose             String    @map("main_purpose")
+  secondaryPurposes       String?   @map("secondary_purposes")
+  originOfData            String?   @map("origin_of_data")
+  dataCollectionChannel   String?   @map("data_collection_channel")
+  approximateVolume       String?   @map("approximate_volume")
+  processingFrequency     String?   @map("processing_frequency")
+  automatedProcessing     Boolean   @default(false) @map("automated_processing")
+  profiling               Boolean   @default(false)
+  automatedDecisions      Boolean   @default(false) @map("automated_decisions")
+  usesAi                  Boolean   @default(false) @map("uses_ai")
+  largeScaleProcessing    Boolean   @default(false) @map("large_scale_processing")
+  internationalTransfer   Boolean   @default(false) @map("international_transfer")
+  draftLegalBasisId       String?   @map("draft_legal_basis_id")
+  validatedLegalBasisId   String?   @map("validated_legal_basis_id")
+  createdByUserId         String    @map("created_by_user_id")
+  reviewedByUserId        String?   @map("reviewed_by_user_id")
+  currentStatus           String    @default("borrador") @map("current_status")
+  submissionDate          DateTime? @map("submission_date")
+  approvalDate            DateTime? @map("approval_date")
+  riskLevel               String?   @map("risk_level")
+  highRiskFlag            Boolean   @default(false) @map("high_risk_flag")
+  requiresDpia            Boolean   @default(false) @map("requires_dpia")
+  dpiaStatus              String?   @map("dpia_status")
+  reviewDueDate           DateTime? @map("review_due_date")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  dataSubjects              TreatmentDataSubject[]
+  treatmentDataItems        TreatmentDataItem[]
+  treatmentLegalBases       TreatmentLegalBasis[]
+  treatmentThirdParties     TreatmentThirdParty[]
+  internationalTransfers    InternationalTransfer[]
+  treatmentRetention        TreatmentRetention?
+  treatmentSecurityMeasures TreatmentSecurityMeasure[]
+  lifecyclePhases           TreatmentLifecycle[]
+  riskAssessment            RiskAssessment?
+  observations              Observation[]
+  versions                  TreatmentVersion[]
+  statusHistory             StatusHistory[]
+  attachments               Attachment[]
+
+  @@unique([companyId, code, version])
+  @@map("treatments")
+}
+
+model TreatmentDataSubject {
+  id                   String @id @default(uuid())
+  treatmentId          String @map("treatment_id")
+  dataSubjectTypeId    String @map("data_subject_type_id")
+  approximateCount     String? @map("approximate_count")
+  sourceType           String? @map("source_type")
+  relationshipWithCompany String? @map("relationship_with_company")
+  notes                String?
+
+  treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+
+  @@map("treatment_data_subjects")
+}
+
+model TreatmentDataItem {
+  id                  String  @id @default(uuid())
+  treatmentId         String  @map("treatment_id")
+  dataItemId          String  @map("data_item_id")
+  isRequired          Boolean @default(false) @map("is_required")
+  isOptional          Boolean @default(false) @map("is_optional")
+  sourceDirectOrIndirect String? @map("source_direct_or_indirect")
+  notes               String?
+
+  treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+  dataItem  DataItem  @relation(fields: [dataItemId], references: [id], onDelete: Cascade)
+
+  @@map("treatment_data_items")
+}
+
+model TreatmentLegalBasis {
+  id                String  @id @default(uuid())
+  treatmentId       String  @map("treatment_id")
+  legalBasisId      String  @map("legal_basis_id")
+  justification     String?
+  isMainBasis       Boolean @default(false) @map("is_main_basis")
+  proposedByArea    Boolean @default(true) @map("proposed_by_area")
+  validatedByDpo    Boolean @default(false) @map("validated_by_dpo")
+
+  treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+
+  @@map("treatment_legal_bases")
+}
+
+model TreatmentThirdParty {
+  id                   String  @id @default(uuid())
+  treatmentId          String  @map("treatment_id")
+  thirdPartyId         String  @map("third_party_id")
+  accessPurpose        String? @map("access_purpose")
+  accessedDataDescription String? @map("accessed_data_description")
+  involvedDataSubjects String? @map("involved_data_subjects")
+  transferOutsideCountry Boolean @default(false) @map("transfer_outside_country")
+  notes                String?
+
+  treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+
+  @@map("treatment_third_parties")
+}
+
+model InternationalTransfer {
+  id                     String  @id @default(uuid())
+  treatmentId            String  @map("treatment_id")
+  countryId              String  @map("country_id")
+  thirdPartyId           String? @map("third_party_id")
+  destinationName        String? @map("destination_name")
+  transferredDataDescription String? @map("transferred_data_description")
+  purpose                String?
+  transferLegalBasis     String? @map("transfer_legal_basis")
+  safeguards             String?
+  approvedByDpo          Boolean @default(false) @map("approved_by_dpo")
+  notes                  String?
+
+  treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+
+  @@map("international_transfers")
+}
+
+model TreatmentRetention {
+  id                    String  @id @default(uuid())
+  treatmentId           String  @unique @map("treatment_id")
+  retentionRuleId       String? @map("retention_rule_id")
+  activeRetentionPeriod String? @map("active_retention_period")
+  retentionCriteria     String? @map("retention_criteria")
+  legalOrContractualBasis String? @map("legal_or_contractual_basis")
+  blockingApplies       Boolean @default(false) @map("blocking_applies")
+  anonymizationApplies  Boolean @default(false) @map("anonymization_applies")
+  deletionApplies       Boolean @default(false) @map("deletion_applies")
+  deletionMethod        String? @map("deletion_method")
+  reviewFrequency       String? @map("review_frequency")
+  responsibleRole       String? @map("responsible_role")
+  notes                 String?
+
+  treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+
+  @@map("treatment_retentions")
+}
+
+model TreatmentSecurityMeasure {
+  id               String  @id @default(uuid())
+  treatmentId      String  @map("treatment_id")
+  securityMeasureId String @map("security_measure_id")
+  implemented      Boolean @default(false)
+  evidence         String?
+  criticality      String?
+  notes            String?
+
+  treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+
+  @@map("treatment_security_measures")
+}
+
+model TreatmentLifecycle {
+  id                    String  @id @default(uuid())
+  treatmentId           String  @map("treatment_id")
+  lifecyclePhaseId      String  @map("lifecycle_phase_id")
+  activityDescription   String? @map("activity_description")
+  processedDataDescription String? @map("processed_data_description")
+  participants          String?
+  mediumOrSupport       String? @map("medium_or_support")
+  technologies          String?
+  linkedDocuments       String? @map("linked_documents")
+  securityMeasuresByPhase String? @map("security_measures_by_phase")
+  risksByPhase          String? @map("risks_by_phase")
+  phaseOrder            Int     @map("phase_order")
+
+  treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+
+  @@map("treatment_lifecycles")
+}
+
+model RiskAssessment {
+  id                   String  @id @default(uuid())
+  treatmentId          String  @unique @map("treatment_id")
+  usesSpecialCategories Boolean @default(false) @map("uses_special_categories")
+  involvesChildren     Boolean @default(false) @map("involves_children")
+  largeScale           Boolean @default(false) @map("large_scale")
+  systematicMonitoring Boolean @default(false) @map("systematic_monitoring")
+  profiling            Boolean @default(false)
+  automatedDecisions   Boolean @default(false) @map("automated_decisions")
+  videoSurveillance    Boolean @default(false) @map("video_surveillance")
+  geolocation          Boolean @default(false)
+  biometricData        Boolean @default(false) @map("biometric_data")
+  healthData           Boolean @default(false) @map("health_data")
+  criminalData         Boolean @default(false) @map("criminal_data")
+  crossBorderTransfer  Boolean @default(false) @map("cross_border_transfer")
+  potentialHighImpact  Boolean @default(false) @map("potential_high_impact")
+  highRiskFlag         Boolean @default(false) @map("high_risk_flag")
+  requiresDpia         Boolean @default(false) @map("requires_dpia")
+  dpoConclusion        String? @map("dpo_conclusion")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+
+  @@map("risk_assessments")
+}
+
+model Observation {
+  id              String   @id @default(uuid())
+  treatmentId     String   @map("treatment_id")
+  sectionCode     String   @map("section_code")
+  createdByUserId String   @map("created_by_user_id")
+  creatorRole     String   @map("creator_role")
+  message         String
+  status          String   @default("abierta")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+
+  @@map("observations")
+}
+
+model TreatmentVersion {
+  id            String   @id @default(uuid())
+  treatmentId   String   @map("treatment_id")
+  versionNumber Int      @map("version_number")
+  snapshotJson  String   @map("snapshot_json")
+  createdByUserId String @map("created_by_user_id")
+  changeReason  String?  @map("change_reason")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+
+  @@map("treatment_versions")
+}
+
+model StatusHistory {
+  id            String   @id @default(uuid())
+  treatmentId   String   @map("treatment_id")
+  previousStatus String  @map("previous_status")
+  newStatus     String   @map("new_status")
+  changedByUserId String @map("changed_by_user_id")
+  comment       String?
+  changedAt     DateTime @default(now()) @map("changed_at")
+
+  treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+
+  @@map("status_history")
+}
+
+model Attachment {
+  id              String   @id @default(uuid())
+  companyId       String   @map("company_id")
+  treatmentId     String?  @map("treatment_id")
+  uploadedByUserId String  @map("uploaded_by_user_id")
+  fileName        String   @map("file_name")
+  filePath        String   @map("file_path")
+  mimeType        String   @map("mime_type")
+  fileSize        Int      @map("file_size")
+  documentType    String   @map("document_type")
+  uploadedAt      DateTime @default(now()) @map("uploaded_at")
+
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  treatment Treatment? @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+
+  @@map("attachments")
+}
+
+model Audit {
+  id            String   @id @default(uuid())
+  userId        String?  @map("user_id")
+  companyId     String?  @map("company_id")
+  action        String
+  entityName    String   @map("entity_name")
+  entityId      String?  @map("entity_id")
+  oldValuesJson String?  @map("old_values_json")
+  newValuesJson String?  @map("new_values_json")
+  ipAddress     String?  @map("ip_address")
+  userAgent     String?  @map("user_agent")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@map("audits")
 }

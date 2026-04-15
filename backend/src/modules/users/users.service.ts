@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private audit: AuditService) {}
 
   async findAll(currentUser: any, query: { companyId?: string; areaId?: string; search?: string; roleCode?: string }) {
     const where: any = {};
@@ -59,6 +60,15 @@ export class UsersService {
     if (currentUser.roleCode !== 'SUPER_ADMIN' && user.companyId !== currentUser.companyId) {
       throw new ForbiddenException('No tienes permiso para ver este usuario');
     }
+    await this.audit.log({
+      userId: currentUser.userId,
+      companyId: user.companyId || undefined,
+      action: 'USER_CREATED',
+      entityName: 'User',
+      entityId: user.id,
+      newValuesJson: JSON.stringify({ email: user.email, roleId: user.roleId }),
+    });
+
     return user;
   }
 
@@ -104,6 +114,16 @@ export class UsersService {
       include: { role: true, company: true, area: true },
     });
 
+    await this.audit.log({
+      userId: currentUser.userId,
+      companyId: updated.companyId || undefined,
+      action: 'USER_UPDATED',
+      entityName: 'User',
+      entityId: id,
+      oldValuesJson: JSON.stringify(user),
+      newValuesJson: JSON.stringify(data),
+    });
+
     return updated;
   }
 
@@ -114,6 +134,16 @@ export class UsersService {
       data: { isActive: !user.isActive },
       include: { role: true, company: true, area: true },
     });
+    await this.audit.log({
+      userId: currentUser.userId,
+      companyId: updated.companyId || undefined,
+      action: 'USER_STATUS_TOGGLED',
+      entityName: 'User',
+      entityId: id,
+      oldValuesJson: JSON.stringify({ isActive: user.isActive }),
+      newValuesJson: JSON.stringify({ isActive: updated.isActive }),
+    });
+
     return updated;
   }
 }

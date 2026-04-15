@@ -159,11 +159,19 @@ Este documento define el orden exacto de construcción del sistema RAT, tareas p
 
 ---
 
-# FASE 11: AUDITORÍA
+# FASE 11: AUDITORÍA ✅ COMPLETADA
 
-## Tareas
-- Logs
-- Historial de cambios
+## Tareas realizadas
+- `AuditModule` global con `AuditService` y `AuditController`
+- `AuditInterceptor` global que captura automáticamente todas las requests POST/PATCH/PUT/DELETE
+- Auditoría manual inyectada en servicios críticos:
+  - `auth.service.ts`: login, logout, forgot password, reset password
+  - `treatments.service.ts`: crear, actualizar, cambiar estado, eliminar tratamiento
+  - `users.service.ts`: crear, actualizar, toggle status de usuario
+- Endpoint `GET /audits` con filtros (acción, entidad, fechas) y paginación
+- Página `/audits` en frontend con tabla paginada, filtros y visualización de cambios (before/after JSON)
+- Sidebar actualizado con acceso a "Auditoría"
+- Pruebas unitarias: `audit.service.spec.ts` (2 tests) y `audit.controller.spec.ts` (2 tests) — todas pasan
 
 ## Prompt Kimi
 "Implementa un sistema de auditoría que registre todas las acciones críticas en base de datos."

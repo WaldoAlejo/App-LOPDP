@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateTreatmentDto } from './dto/create-treatment.dto';
 import { UpdateTreatmentDto } from './dto/update-treatment.dto';
 import { ChangeStatusDto } from './dto/change-status.dto';
@@ -27,7 +28,7 @@ const STATUS_FLOW: Record<string, string[]> = {
 
 @Injectable()
 export class TreatmentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private audit: AuditService) {}
 
   async findAll(currentUser: any, query: { companyId?: string; areaId?: string; status?: string; search?: string }) {
     const where: any = {};
@@ -110,6 +111,15 @@ export class TreatmentsService {
       },
     });
 
+    await this.audit.log({
+      userId: currentUser.userId,
+      companyId: treatment.companyId,
+      action: 'TREATMENT_CREATED',
+      entityName: 'Treatment',
+      entityId: treatment.id,
+      newValuesJson: JSON.stringify(dto),
+    });
+
     return treatment;
   }
 
@@ -119,10 +129,22 @@ export class TreatmentsService {
       throw new BadRequestException('No se puede editar un tratamiento en el estado actual');
     }
 
-    return this.prisma.treatment.update({
+    const updated = await this.prisma.treatment.update({
       where: { id },
       data: dto,
     });
+
+    await this.audit.log({
+      userId: currentUser.userId,
+      companyId: treatment.companyId,
+      action: 'TREATMENT_UPDATED',
+      entityName: 'Treatment',
+      entityId: id,
+      oldValuesJson: JSON.stringify(treatment),
+      newValuesJson: JSON.stringify(dto),
+    });
+
+    return updated;
   }
 
   async changeStatus(id: string, dto: ChangeStatusDto, currentUser: any) {
@@ -179,6 +201,16 @@ export class TreatmentsService {
       await this.evaluateRisk(id);
     }
 
+    await this.audit.log({
+      userId: currentUser.userId,
+      companyId: treatment.companyId,
+      action: 'TREATMENT_STATUS_CHANGED',
+      entityName: 'Treatment',
+      entityId: id,
+      oldValuesJson: JSON.stringify({ status: treatment.currentStatus }),
+      newValuesJson: JSON.stringify({ status: newStatus, comment: dto.comment }),
+    });
+
     return updated;
   }
 
@@ -188,6 +220,14 @@ export class TreatmentsService {
       throw new BadRequestException('Solo se pueden eliminar tratamientos en borrador');
     }
     await this.prisma.treatment.delete({ where: { id } });
+    await this.audit.log({
+      userId: currentUser.userId,
+      companyId: treatment.companyId,
+      action: 'TREATMENT_DELETED',
+      entityName: 'Treatment',
+      entityId: id,
+      oldValuesJson: JSON.stringify(treatment),
+    });
     return { message: 'Tratamiento eliminado' };
   }
 

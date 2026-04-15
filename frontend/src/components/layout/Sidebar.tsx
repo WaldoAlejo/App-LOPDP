@@ -13,6 +13,7 @@ import {
   Gavel,
   AlertTriangle,
   BarChart3,
+  ClipboardList,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { clsx } from 'clsx';
@@ -23,6 +24,7 @@ const navItems = [
   { to: '/reviews', icon: Gavel, label: 'Revisión DPO' },
   { to: '/risks', icon: AlertTriangle, label: 'Riesgos / EIPD' },
   { to: '/reports', icon: BarChart3, label: 'Reportes' },
+  { to: '/audits', icon: ClipboardList, label: 'Auditoría' },
   { to: '/companies', icon: Building2, label: 'Empresas' },
   { to: '/areas', icon: FolderTree, label: 'Áreas' },
   { to: '/processes', icon: GitBranch, label: 'Procesos' },

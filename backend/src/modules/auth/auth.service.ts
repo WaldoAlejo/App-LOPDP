@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { AuditService } from '../audit/audit.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -16,6 +17,7 @@ export class AuthService {
     private jwt: JwtService,
     private config: ConfigService,
     private mail: MailService,
+    private audit: AuditService,
   ) {}
 
   async login(dto: LoginDto) {
@@ -39,6 +41,14 @@ export class AuthService {
 
     const tokens = await this.generateTokens(user.id, user.email, user.role.code);
     await this.storeRefreshToken(user.id, tokens.refreshToken);
+
+    await this.audit.log({
+      userId: user.id,
+      companyId: user.companyId || undefined,
+      action: 'LOGIN_SUCCESS',
+      entityName: 'User',
+      entityId: user.id,
+    });
 
     return {
       user: {
@@ -81,6 +91,12 @@ export class AuthService {
 
   async logout(userId: string) {
     await this.prisma.refreshToken.deleteMany({ where: { userId } });
+    await this.audit.log({
+      userId,
+      action: 'LOGOUT',
+      entityName: 'User',
+      entityId: userId,
+    });
     return { message: 'Sesión cerrada' };
   }
 
@@ -94,6 +110,13 @@ export class AuthService {
       { secret: this.config.get('JWT_SECRET'), expiresIn: '1h' },
     );
     await this.mail.sendPasswordReset(user.email, token);
+    await this.audit.log({
+      userId: user.id,
+      companyId: user.companyId || undefined,
+      action: 'FORGOT_PASSWORD',
+      entityName: 'User',
+      entityId: user.id,
+    });
     return { message: 'Si el correo existe, recibirás instrucciones' };
   }
 
@@ -111,6 +134,12 @@ export class AuthService {
         data: { passwordHash },
       });
       await this.prisma.refreshToken.deleteMany({ where: { userId: payload.sub } });
+      await this.audit.log({
+        userId: payload.sub,
+        action: 'RESET_PASSWORD',
+        entityName: 'User',
+        entityId: payload.sub,
+      });
       return { message: 'Contraseña actualizada correctamente' };
     } catch {
       throw new BadRequestException('Token inválido o expirado');

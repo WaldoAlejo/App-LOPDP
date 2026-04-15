@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './modules/prisma/prisma.module';
@@ -14,6 +14,8 @@ import { TreatmentsModule } from './modules/treatments/treatments.module';
 import { ObservationsModule } from './modules/observations/observations.module';
 import { VersionsModule } from './modules/versions/versions.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -31,12 +33,14 @@ import { RolesGuard } from './common/guards/roles.guard';
     ObservationsModule,
     VersionsModule,
     ReportsModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
 })
 export class AppModule {}

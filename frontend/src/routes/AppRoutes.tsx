@@ -13,6 +13,7 @@ import { ReviewsPage } from '../pages/ReviewsPage';
 import { ReviewDetailPage } from '../pages/ReviewDetailPage';
 import { RisksPage } from '../pages/RisksPage';
 import { ReportsPage } from '../pages/ReportsPage';
+import { AuditsPage } from '../pages/AuditsPage';
 import { useAuthStore } from '../store/authStore';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -39,6 +40,7 @@ export function AppRoutes() {
         <Route path="reviews/:id" element={<ReviewDetailPage />} />
         <Route path="risks" element={<RisksPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="audits" element={<AuditsPage />} />
         <Route path="companies" element={<CompaniesPage />} />
         <Route path="areas" element={<AreasPage />} />
         <Route path="processes" element={<ProcessesPage />} />

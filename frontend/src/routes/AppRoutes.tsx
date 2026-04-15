@@ -3,6 +3,9 @@ import { MainLayout } from '../layouts/MainLayout';
 import { LoginPage } from '../pages/LoginPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { UsersPage } from '../pages/UsersPage';
+import { CompaniesPage } from '../pages/CompaniesPage';
+import { AreasPage } from '../pages/AreasPage';
+import { ProcessesPage } from '../pages/ProcessesPage';
 import { useAuthStore } from '../store/authStore';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -23,6 +26,9 @@ export function AppRoutes() {
         }
       >
         <Route index element={<DashboardPage />} />
+        <Route path="companies" element={<CompaniesPage />} />
+        <Route path="areas" element={<AreasPage />} />
+        <Route path="processes" element={<ProcessesPage />} />
         <Route path="users" element={<UsersPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

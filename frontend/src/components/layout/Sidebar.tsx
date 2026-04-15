@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Menu, X, LayoutDashboard, Settings, Users, Building2 } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Settings, Users, Building2, FolderTree, GitBranch } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { clsx } from 'clsx';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/companies', icon: Building2, label: 'Empresas' },
+  { to: '/areas', icon: FolderTree, label: 'Áreas' },
+  { to: '/processes', icon: GitBranch, label: 'Procesos' },
   { to: '/users', icon: Users, label: 'Usuarios' },
   { to: '/settings', icon: Settings, label: 'Configuración' },
 ];

@@ -127,6 +127,12 @@ Este documento define el orden exacto de construcción del sistema RAT, tareas p
 - Endpoints: `GET /reports/rat-master/excel` y `GET /reports/rat-master/pdf`
 - **Corrección de relaciones en Prisma**: se agregaron las relaciones faltantes entre `Treatment` ↔ `Area`/`Process`, `TreatmentDataSubject` ↔ `DataSubjectType`, `TreatmentLegalBasis` ↔ `LegalBasis`, `TreatmentThirdParty` ↔ `ThirdParty`, `InternationalTransfer` ↔ `Country`, `TreatmentRetention` ↔ `RetentionRule`, `TreatmentSecurityMeasure` ↔ `SecurityMeasure`, `TreatmentLifecycle` ↔ `LifecyclePhase`, y las relaciones inversas en todos los modelos de catálogo.
 - **Pruebas unitarias**: `reports.service.spec.ts` (4 tests) y `reports.controller.spec.ts` (4 tests) — todas pasan.
+- **Limpieza de datos mock/hardcodeados**:
+  - Eliminados scripts de seed de prueba (`seed-company.ts`, `seed-areas-processes.ts`, `seed-catalogs.ts`, `seed-treatment.ts`)
+  - `prisma/seed.ts` ahora usa `SEED_SUPERADMIN_EMAIL` y `SEED_SUPERADMIN_PASSWORD` desde variables de entorno
+  - `mail.service.ts` ya no tiene fallbacks a localhost; lanza error si falta configuración SMTP
+  - `frontend/src/services/api.ts` ya no tiene fallback a `localhost:3001`; lanza error si falta `VITE_API_URL`
+  - `auth.service.ts` reemplazó el `Map` en memoria por la tabla `RefreshToken` en PostgreSQL con migración aplicada en GCP
 
 ## Prompt Kimi
 "Genera el módulo de reportes que consolide el RAT maestro y permita exportarlo a Excel y PDF."

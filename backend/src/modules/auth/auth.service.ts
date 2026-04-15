@@ -11,8 +11,6 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
 export class AuthService {
-  private refreshTokens = new Map<string, string>(); // userId -> refreshToken
-
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
@@ -40,7 +38,7 @@ export class AuthService {
     });
 
     const tokens = await this.generateTokens(user.id, user.email, user.role.code);
-    this.refreshTokens.set(user.id, tokens.refreshToken);
+    await this.storeRefreshToken(user.id, tokens.refreshToken);
 
     return {
       user: {
@@ -60,8 +58,10 @@ export class AuthService {
       const payload = this.jwt.verify(dto.refreshToken, {
         secret: this.config.get('JWT_REFRESH_SECRET'),
       });
-      const stored = this.refreshTokens.get(payload.sub);
-      if (!stored || stored !== dto.refreshToken) {
+      const stored = await this.prisma.refreshToken.findUnique({
+        where: { token: dto.refreshToken },
+      });
+      if (!stored || stored.userId !== payload.sub || stored.expiresAt < new Date()) {
         throw new UnauthorizedException('Refresh token inválido');
       }
       const user = await this.prisma.user.findUnique({
@@ -72,7 +72,7 @@ export class AuthService {
         throw new UnauthorizedException('Usuario no válido');
       }
       const tokens = await this.generateTokens(user.id, user.email, user.role.code);
-      this.refreshTokens.set(user.id, tokens.refreshToken);
+      await this.storeRefreshToken(user.id, tokens.refreshToken);
       return tokens;
     } catch {
       throw new UnauthorizedException('Refresh token inválido');
@@ -80,7 +80,7 @@ export class AuthService {
   }
 
   async logout(userId: string) {
-    this.refreshTokens.delete(userId);
+    await this.prisma.refreshToken.deleteMany({ where: { userId } });
     return { message: 'Sesión cerrada' };
   }
 
@@ -110,7 +110,7 @@ export class AuthService {
         where: { id: payload.sub },
         data: { passwordHash },
       });
-      this.refreshTokens.delete(payload.sub);
+      await this.prisma.refreshToken.deleteMany({ where: { userId: payload.sub } });
       return { message: 'Contraseña actualizada correctamente' };
     } catch {
       throw new BadRequestException('Token inválido o expirado');
@@ -128,5 +128,24 @@ export class AuthService {
       expiresIn: this.config.get('JWT_REFRESH_EXPIRATION') || '7d',
     });
     return { accessToken, refreshToken };
+  }
+
+  private async storeRefreshToken(userId: string, token: string) {
+    const expiresIn = this.config.get('JWT_REFRESH_EXPIRATION') || '7d';
+    const expiresAt = new Date(Date.now() + this.parseDuration(expiresIn));
+    await this.prisma.refreshToken.upsert({
+      where: { token },
+      update: { expiresAt },
+      create: { userId, token, expiresAt },
+    });
+  }
+
+  private parseDuration(duration: string): number {
+    const match = duration.match(/^(\d+)([smhd])$/);
+    if (!match) return 7 * 24 * 60 * 60 * 1000;
+    const value = parseInt(match[1], 10);
+    const unit = match[2];
+    const multipliers: Record<string, number> = { s: 1000, m: 60 * 1000, h: 60 * 60 * 1000, d: 24 * 60 * 60 * 1000 };
+    return value * (multipliers[unit] || multipliers.d);
   }
 }

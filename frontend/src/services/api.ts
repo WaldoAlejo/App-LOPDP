@@ -2,8 +2,13 @@ import axios from 'axios';
 import { authService } from './auth.service';
 import { useAuthStore } from '../store/authStore';
 
+const apiUrl = import.meta.env.VITE_API_URL;
+if (!apiUrl) {
+  throw new Error('VITE_API_URL no está configurada');
+}
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api',
+  baseURL: apiUrl,
   headers: {
     'Content-Type': 'application/json',
   },

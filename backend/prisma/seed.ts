@@ -22,29 +22,36 @@ async function main() {
     });
   }
 
-  const superAdminRole = await prisma.role.findUnique({
-    where: { code: 'SUPER_ADMIN' },
-  });
+  const superAdminEmail = process.env.SEED_SUPERADMIN_EMAIL;
+  const superAdminPassword = process.env.SEED_SUPERADMIN_PASSWORD;
 
-  if (superAdminRole) {
-    const existing = await prisma.user.findUnique({
-      where: { email: 'superadmin@servientrega-rat.com' },
+  if (superAdminEmail && superAdminPassword) {
+    const superAdminRole = await prisma.role.findUnique({
+      where: { code: 'SUPER_ADMIN' },
     });
 
-    if (!existing) {
-      const passwordHash = await bcrypt.hash('SuperAdmin123!', 10);
-      await prisma.user.create({
-        data: {
-          firstName: 'Super',
-          lastName: 'Administrador',
-          email: 'superadmin@servientrega-rat.com',
-          passwordHash,
-          roleId: superAdminRole.id,
-          isActive: true,
-        },
+    if (superAdminRole) {
+      const existing = await prisma.user.findUnique({
+        where: { email: superAdminEmail },
       });
-      console.log('Usuario superadmin creado.');
+
+      if (!existing) {
+        const passwordHash = await bcrypt.hash(superAdminPassword, 10);
+        await prisma.user.create({
+          data: {
+            firstName: 'Super',
+            lastName: 'Administrador',
+            email: superAdminEmail,
+            passwordHash,
+            roleId: superAdminRole.id,
+            isActive: true,
+          },
+        });
+        console.log('Usuario superadmin creado.');
+      }
     }
+  } else {
+    console.log('Variables SEED_SUPERADMIN_EMAIL y/o SEED_SUPERADMIN_PASSWORD no definidas. Saltando creación de superadmin.');
   }
 
   console.log('Seed completado.');

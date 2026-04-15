@@ -43,7 +43,13 @@ export function TreatmentsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">Tratamientos (RAT)</h2>
-        <button className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700">
+        <button
+          onClick={() => {
+            const nav = (window as any).navigate || ((path: string) => window.location.href = path);
+            nav('/treatments/new');
+          }}
+          className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+        >
           Nuevo tratamiento
         </button>
       </div>

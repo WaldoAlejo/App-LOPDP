@@ -12,6 +12,7 @@ import {
   FileText,
   Gavel,
   AlertTriangle,
+  BarChart3,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { clsx } from 'clsx';
@@ -21,6 +22,7 @@ const navItems = [
   { to: '/treatments', icon: FileText, label: 'Tratamientos' },
   { to: '/reviews', icon: Gavel, label: 'Revisión DPO' },
   { to: '/risks', icon: AlertTriangle, label: 'Riesgos / EIPD' },
+  { to: '/reports', icon: BarChart3, label: 'Reportes' },
   { to: '/companies', icon: Building2, label: 'Empresas' },
   { to: '/areas', icon: FolderTree, label: 'Áreas' },
   { to: '/processes', icon: GitBranch, label: 'Procesos' },

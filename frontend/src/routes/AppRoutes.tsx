@@ -12,6 +12,7 @@ import { TreatmentWizardPage } from '../pages/TreatmentWizardPage';
 import { ReviewsPage } from '../pages/ReviewsPage';
 import { ReviewDetailPage } from '../pages/ReviewDetailPage';
 import { RisksPage } from '../pages/RisksPage';
+import { ReportsPage } from '../pages/ReportsPage';
 import { useAuthStore } from '../store/authStore';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -37,6 +38,7 @@ export function AppRoutes() {
         <Route path="reviews" element={<ReviewsPage />} />
         <Route path="reviews/:id" element={<ReviewDetailPage />} />
         <Route path="risks" element={<RisksPage />} />
+        <Route path="reports" element={<ReportsPage />} />
         <Route path="companies" element={<CompaniesPage />} />
         <Route path="areas" element={<AreasPage />} />
         <Route path="processes" element={<ProcessesPage />} />

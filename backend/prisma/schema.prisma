@@ -114,6 +114,7 @@ model Area {
   company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   processes Process[]
   users     User[]
+  treatments Treatment[]
 
   @@map("areas")
 }
@@ -134,6 +135,7 @@ model Process {
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   area    Area    @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  treatments Treatment[]
 
   @@map("processes")
 }
@@ -149,6 +151,7 @@ model DataSubjectType {
   isActive    Boolean @default(true) @map("is_active")
 
   company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  treatmentDataSubjects TreatmentDataSubject[]
 
   @@unique([companyId, code])
   @@map("data_subject_types")
@@ -196,6 +199,7 @@ model LegalBasis {
   isActive       Boolean @default(true) @map("is_active")
 
   company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  treatmentLegalBases TreatmentLegalBasis[]
 
   @@unique([companyId, code])
   @@map("legal_bases")
@@ -235,6 +239,7 @@ model ThirdParty {
   company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   country        Country?        @relation(fields: [countryId], references: [id], onDelete: SetNull)
   thirdPartyType ThirdPartyType? @relation(fields: [thirdPartyTypeId], references: [id], onDelete: SetNull)
+  treatmentThirdParties TreatmentThirdParty[]
 
   @@map("third_parties")
 }
@@ -247,6 +252,7 @@ model Country {
   isActive Boolean @default(true) @map("is_active")
 
   thirdParties ThirdParty[]
+  internationalTransfers InternationalTransfer[]
 
   @@map("countries")
 }
@@ -261,6 +267,7 @@ model SecurityMeasure {
   isActive    Boolean @default(true) @map("is_active")
 
   company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  treatmentSecurityMeasures TreatmentSecurityMeasure[]
 
   @@unique([companyId, code])
   @@map("security_measures")
@@ -277,6 +284,7 @@ model RetentionRule {
   isActive       Boolean @default(true) @map("is_active")
 
   company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  treatmentRetentions TreatmentRetention[]
 
   @@unique([companyId, code])
   @@map("retention_rules")
@@ -292,6 +300,7 @@ model LifecyclePhase {
   isActive    Boolean @default(true) @map("is_active")
 
   company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  treatmentLifecycles TreatmentLifecycle[]
 
   @@unique([companyId, code])
   @@map("lifecycle_phases")
@@ -352,6 +361,8 @@ model Treatment {
   updatedAt               DateTime  @updatedAt @map("updated_at")
 
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  area    Area    @relation(fields: [areaId], references: [id], onDelete: Cascade)
+  process Process @relation(fields: [processId], references: [id], onDelete: Cascade)
 
   dataSubjects              TreatmentDataSubject[]
   treatmentDataItems        TreatmentDataItem[]
@@ -381,6 +392,7 @@ model TreatmentDataSubject {
   notes                String?
 
   treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+  dataSubjectType DataSubjectType @relation(fields: [dataSubjectTypeId], references: [id], onDelete: Cascade)
 
   @@map("treatment_data_subjects")
 }
@@ -410,6 +422,7 @@ model TreatmentLegalBasis {
   validatedByDpo    Boolean @default(false) @map("validated_by_dpo")
 
   treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+  legalBasis LegalBasis @relation(fields: [legalBasisId], references: [id], onDelete: Cascade)
 
   @@map("treatment_legal_bases")
 }
@@ -425,6 +438,7 @@ model TreatmentThirdParty {
   notes                String?
 
   treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+  thirdParty ThirdParty @relation(fields: [thirdPartyId], references: [id], onDelete: Cascade)
 
   @@map("treatment_third_parties")
 }
@@ -443,6 +457,7 @@ model InternationalTransfer {
   notes                  String?
 
   treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+  country Country @relation(fields: [countryId], references: [id], onDelete: Cascade)
 
   @@map("international_transfers")
 }
@@ -463,6 +478,7 @@ model TreatmentRetention {
   notes                 String?
 
   treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+  retentionRule RetentionRule? @relation(fields: [retentionRuleId], references: [id], onDelete: SetNull)
 
   @@map("treatment_retentions")
 }
@@ -477,6 +493,7 @@ model TreatmentSecurityMeasure {
   notes            String?
 
   treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+  securityMeasure SecurityMeasure @relation(fields: [securityMeasureId], references: [id], onDelete: Cascade)
 
   @@map("treatment_security_measures")
 }
@@ -496,6 +513,7 @@ model TreatmentLifecycle {
   phaseOrder            Int     @map("phase_order")
 
   treatment Treatment @relation(fields: [treatmentId], references: [id], onDelete: Cascade)
+  lifecyclePhase LifecyclePhase @relation(fields: [lifecyclePhaseId], references: [id], onDelete: Cascade)
 
   @@map("treatment_lifecycles")
 }

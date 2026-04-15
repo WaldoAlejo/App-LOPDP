@@ -115,11 +115,17 @@ Este documento define el orden exacto de construcción del sistema RAT, tareas p
 
 ---
 
-# FASE 9: RAT MAESTRO Y REPORTES
+# FASE 9: RAT MAESTRO Y REPORTES ✅ COMPLETADA
 
-## Tareas
-- Consolidación
-- Exportación Excel/PDF
+## Tareas realizadas
+- Módulo `ReportsModule` en backend con `ReportsService` y `ReportsController`
+- Generación de RAT Maestro en Excel con 13 hojas: Resumen, Tratamientos, Titulares, Datos tratados, Bases legales, Terceros, Transferencias internacionales, Retención, Medidas de seguridad, Ciclo de vida, Evaluación de riesgo, Observaciones DPO, Historial de estados
+- Generación de RAT Maestro en PDF con formato profesional, tablas y badges de riesgo
+- Instalación de `exceljs` y `puppeteer` en backend
+- Página `/reports` en frontend con botones de descarga Excel/PDF
+- Sidebar actualizado con acceso a "Reportes"
+- Endpoints: `GET /reports/rat-master/excel` y `GET /reports/rat-master/pdf`
+- **Corrección de relaciones en Prisma**: se agregaron las relaciones faltantes entre `Treatment` ↔ `Area`/`Process`, `TreatmentDataSubject` ↔ `DataSubjectType`, `TreatmentLegalBasis` ↔ `LegalBasis`, `TreatmentThirdParty` ↔ `ThirdParty`, `InternationalTransfer` ↔ `Country`, `TreatmentRetention` ↔ `RetentionRule`, `TreatmentSecurityMeasure` ↔ `SecurityMeasure`, `TreatmentLifecycle` ↔ `LifecyclePhase`, y las relaciones inversas en todos los modelos de catálogo.
 
 ## Prompt Kimi
 "Genera el módulo de reportes que consolide el RAT maestro y permita exportarlo a Excel y PDF."

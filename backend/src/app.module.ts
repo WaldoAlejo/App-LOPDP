@@ -13,6 +13,7 @@ import { CatalogsModule } from './modules/catalogs/catalogs.module';
 import { TreatmentsModule } from './modules/treatments/treatments.module';
 import { ObservationsModule } from './modules/observations/observations.module';
 import { VersionsModule } from './modules/versions/versions.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -29,6 +30,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     TreatmentsModule,
     ObservationsModule,
     VersionsModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, X, LayoutDashboard, Settings, Users, Building2, FolderTree, GitBranch } from 'lucide-react';
+import { Menu, X, LayoutDashboard, Settings, Users, Building2, FolderTree, GitBranch, Library } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { clsx } from 'clsx';
 
@@ -9,6 +9,7 @@ const navItems = [
   { to: '/areas', icon: FolderTree, label: 'Áreas' },
   { to: '/processes', icon: GitBranch, label: 'Procesos' },
   { to: '/users', icon: Users, label: 'Usuarios' },
+  { to: '/catalogs', icon: Library, label: 'Catálogos' },
   { to: '/settings', icon: Settings, label: 'Configuración' },
 ];
 

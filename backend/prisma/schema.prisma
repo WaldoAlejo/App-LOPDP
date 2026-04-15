@@ -22,9 +22,17 @@ model Company {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  areas     Area[]
-  processes Process[]
-  users     User[]
+  areas            Area[]
+  processes        Process[]
+  users            User[]
+  dataSubjectTypes DataSubjectType[]
+  dataCategories   DataCategory[]
+  legalBases       LegalBasis[]
+  thirdParties     ThirdParty[]
+  securityMeasures SecurityMeasure[]
+  retentionRules   RetentionRule[]
+  lifecyclePhases  LifecyclePhase[]
+  risks            Risk[]
 
   @@map("companies")
 }
@@ -125,4 +133,178 @@ model Process {
   area    Area    @relation(fields: [areaId], references: [id], onDelete: Cascade)
 
   @@map("processes")
+}
+
+// ==================== CATÁLOGOS MAESTROS ====================
+
+model DataSubjectType {
+  id          String  @id @default(uuid())
+  companyId   String? @map("company_id")
+  code        String
+  name        String
+  description String?
+  isActive    Boolean @default(true) @map("is_active")
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, code])
+  @@map("data_subject_types")
+}
+
+model DataCategory {
+  id                String  @id @default(uuid())
+  companyId         String? @map("company_id")
+  code              String
+  name              String
+  description       String?
+  isSpecialCategory Boolean @default(false) @map("is_special_category")
+  isActive          Boolean @default(true) @map("is_active")
+
+  company   Company?   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  dataItems DataItem[]
+
+  @@unique([companyId, code])
+  @@map("data_categories")
+}
+
+model DataItem {
+  id             String @id @default(uuid())
+  dataCategoryId String @map("data_category_id")
+  code           String
+  name           String
+  description    String?
+  isSensitive    Boolean @default(false) @map("is_sensitive")
+  isActive       Boolean @default(true) @map("is_active")
+
+  dataCategory DataCategory @relation(fields: [dataCategoryId], references: [id], onDelete: Cascade)
+
+  @@unique([dataCategoryId, code])
+  @@map("data_items")
+}
+
+model LegalBasis {
+  id             String  @id @default(uuid())
+  companyId      String? @map("company_id")
+  code           String
+  name           String
+  description    String?
+  legalReference String? @map("legal_reference")
+  isActive       Boolean @default(true) @map("is_active")
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, code])
+  @@map("legal_bases")
+}
+
+model ThirdPartyType {
+  id          String @id @default(uuid())
+  code        String @unique
+  name        String
+  description String?
+
+  thirdParties ThirdParty[]
+
+  @@map("third_party_types")
+}
+
+model ThirdParty {
+  id                             String  @id @default(uuid())
+  companyId                      String  @map("company_id")
+  name                           String
+  identificationNumber           String? @map("identification_number")
+  countryId                      String? @map("country_id")
+  legalAddress                   String? @map("legal_address")
+  contactName                    String? @map("contact_name")
+  contactEmail                   String? @map("contact_email")
+  contactPhone                   String? @map("contact_phone")
+  thirdPartyTypeId               String? @map("third_party_type_id")
+  actsAsProcessor                Boolean @default(false) @map("acts_as_processor")
+  actsAsRecipient                Boolean @default(false) @map("acts_as_recipient")
+  actsAsJointController          Boolean @default(false) @map("acts_as_joint_controller")
+  contractExists                 Boolean @default(false) @map("contract_exists")
+  confidentialityAgreementExists Boolean @default(false) @map("confidentiality_agreement_exists")
+  usesSubprocessors              Boolean @default(false) @map("uses_subprocessors")
+  notes                          String?
+  isActive                       Boolean @default(true) @map("is_active")
+
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  country        Country?        @relation(fields: [countryId], references: [id], onDelete: SetNull)
+  thirdPartyType ThirdPartyType? @relation(fields: [thirdPartyTypeId], references: [id], onDelete: SetNull)
+
+  @@map("third_parties")
+}
+
+model Country {
+  id       String  @id @default(uuid())
+  isoCode  String  @map("iso_code")
+  name     String
+  region   String?
+  isActive Boolean @default(true) @map("is_active")
+
+  thirdParties ThirdParty[]
+
+  @@map("countries")
+}
+
+model SecurityMeasure {
+  id          String  @id @default(uuid())
+  companyId   String? @map("company_id")
+  code        String
+  name        String
+  category    String
+  description String?
+  isActive    Boolean @default(true) @map("is_active")
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, code])
+  @@map("security_measures")
+}
+
+model RetentionRule {
+  id             String  @id @default(uuid())
+  companyId      String? @map("company_id")
+  code           String
+  name           String
+  description    String?
+  defaultTerm    String? @map("default_term")
+  legalReference String? @map("legal_reference")
+  isActive       Boolean @default(true) @map("is_active")
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, code])
+  @@map("retention_rules")
+}
+
+model LifecyclePhase {
+  id          String  @id @default(uuid())
+  companyId   String? @map("company_id")
+  code        String
+  name        String
+  orderIndex  Int     @map("order_index")
+  description String?
+  isActive    Boolean @default(true) @map("is_active")
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, code])
+  @@map("lifecycle_phases")
+}
+
+model Risk {
+  id          String  @id @default(uuid())
+  companyId   String? @map("company_id")
+  code        String
+  name        String
+  description String?
+  category    String
+  severity    String
+  isActive    Boolean @default(true) @map("is_active")
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, code])
+  @@map("risks")
 }

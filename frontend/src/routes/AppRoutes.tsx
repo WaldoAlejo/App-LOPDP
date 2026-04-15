@@ -6,6 +6,7 @@ import { UsersPage } from '../pages/UsersPage';
 import { CompaniesPage } from '../pages/CompaniesPage';
 import { AreasPage } from '../pages/AreasPage';
 import { ProcessesPage } from '../pages/ProcessesPage';
+import { CatalogsPage } from '../pages/CatalogsPage';
 import { useAuthStore } from '../store/authStore';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -30,6 +31,7 @@ export function AppRoutes() {
         <Route path="areas" element={<AreasPage />} />
         <Route path="processes" element={<ProcessesPage />} />
         <Route path="users" element={<UsersPage />} />
+        <Route path="catalogs" element={<CatalogsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

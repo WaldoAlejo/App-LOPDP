@@ -9,6 +9,7 @@ import { UsersModule } from './modules/users/users.module';
 import { CompaniesModule } from './modules/companies/companies.module';
 import { AreasModule } from './modules/areas/areas.module';
 import { ProcessesModule } from './modules/processes/processes.module';
+import { CatalogsModule } from './modules/catalogs/catalogs.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -21,6 +22,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     CompaniesModule,
     AreasModule,
     ProcessesModule,
+    CatalogsModule,
   ],
   controllers: [AppController],
   providers: [

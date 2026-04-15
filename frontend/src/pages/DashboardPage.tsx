@@ -1,26 +1,73 @@
 import { useQuery } from '@tanstack/react-query';
-import { treatmentService } from '../services/treatment.service';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  LineChart,
+  Line,
+  CartesianGrid,
+} from 'recharts';
+import { kpiService } from '../services/kpi.service';
 import { useAuthStore } from '../store/authStore';
+
+const statusColors: Record<string, string> = {
+  borrador: '#9ca3af',
+  en_edicion: '#60a5fa',
+  enviado: '#fbbf24',
+  en_revision_dpo: '#a78bfa',
+  observado: '#f87171',
+  en_correccion: '#fb923c',
+  subsanado: '#34d399',
+  validado: '#22d3ee',
+  aprobado: '#4ade80',
+  requiere_eipd: '#f472b6',
+  archivado: '#6b7280',
+};
+
+const riskColors: Record<string, string> = {
+  bajo: '#22c55e',
+  medio: '#eab308',
+  alto: '#f97316',
+  critico: '#ef4444',
+  sin_evaluar: '#9ca3af',
+};
 
 export function DashboardPage() {
   const user = useAuthStore((s) => s.user);
-  const { data: treatments, isLoading } = useQuery({
-    queryKey: ['treatments', 'dashboard', user?.companyId],
-    queryFn: () => treatmentService.getAll({ companyId: user?.companyId }),
+  const { data: kpis, isLoading } = useQuery({
+    queryKey: ['kpis', user?.companyId],
+    queryFn: () => kpiService.getAll(user?.companyId),
     enabled: !!user?.companyId,
   });
 
-  const total = treatments?.length || 0;
-  const pending = treatments?.filter((t) => ['borrador', 'en_edicion', 'enviado', 'en_revision_dpo', 'observado', 'en_correccion', 'subsanado'].includes(t.currentStatus)).length || 0;
-  const approved = treatments?.filter((t) => t.currentStatus === 'aprobado').length || 0;
-  const highRisk = treatments?.filter((t) => t.highRiskFlag).length || 0;
-  const requiresDpia = treatments?.filter((t) => t.requiresDpia).length || 0;
+  const statusData = kpis
+    ? Object.entries(kpis.statusBreakdown).map(([name, value]) => ({ name, value }))
+    : [];
 
-  const kpis = [
-    { label: 'Total tratamientos', value: total },
-    { label: 'Pendientes', value: pending },
-    { label: 'Aprobados', value: approved },
-    { label: 'Alto riesgo', value: highRisk, color: highRisk > 0 ? 'text-red-600' : undefined },
+  const riskData = kpis
+    ? Object.entries(kpis.riskLevelBreakdown).map(([name, value]) => ({ name, value }))
+    : [];
+
+  const activityData = kpis?.recentActivity.map((d) => ({ date: d.date.slice(5), count: d.count })) || [];
+
+  const topAreasData = kpis?.topAreas || [];
+
+  const kpiCards = [
+    { label: 'Total tratamientos', value: kpis?.totalTreatments || 0 },
+    { label: 'Pendientes', value: kpis?.pendingTreatments || 0, color: 'text-blue-600' },
+    { label: 'Aprobados', value: kpis?.approvedTreatments || 0, color: 'text-green-600' },
+    { label: 'En revisión DPO', value: kpis?.underDpoReview || 0, color: 'text-purple-600' },
+    { label: 'Alto riesgo', value: kpis?.highRiskTreatments || 0, color: 'text-red-600' },
+    { label: 'Requieren EIPD', value: kpis?.requiresDpia || 0, color: 'text-orange-600' },
+    { label: 'EIPD completado', value: kpis?.dpiaCompleted || 0, color: 'text-teal-600' },
+    { label: 'Con observaciones abiertas', value: kpis?.withOpenObservations || 0, color: 'text-rose-600' },
   ];
 
   return (
@@ -28,7 +75,7 @@ export function DashboardPage() {
       <h2 className="text-xl font-bold text-gray-900">Dashboard</h2>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {kpis.map((kpi) => (
+        {kpiCards.map((kpi) => (
           <div key={kpi.label} className="rounded-lg bg-white p-4 shadow-sm">
             <p className="text-sm text-gray-500">{kpi.label}</p>
             <p className={`text-2xl font-bold ${kpi.color || 'text-gray-900'}`}>
@@ -40,36 +87,93 @@ export function DashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-lg bg-white p-4 shadow-sm">
-          <h3 className="mb-3 text-sm font-semibold text-gray-700">Resumen de riesgo</h3>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Tratamientos que requieren EIPD</span>
-              <span className="text-lg font-bold text-orange-600">{isLoading ? '-' : requiresDpia}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Tratamientos de alto riesgo</span>
-              <span className="text-lg font-bold text-red-600">{isLoading ? '-' : highRisk}</span>
-            </div>
+          <h3 className="mb-3 text-sm font-semibold text-gray-700">Tratamientos por estado</h3>
+          <div className="h-64">
+            {isLoading ? (
+              <p className="text-sm text-gray-500">Cargando...</p>
+            ) : statusData.length === 0 ? (
+              <p className="text-sm text-gray-500">No hay datos</p>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={statusColors[entry.name] || '#9ca3af'} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
         <div className="rounded-lg bg-white p-4 shadow-sm">
-          <h3 className="mb-3 text-sm font-semibold text-gray-700">Estados recientes</h3>
-          {isLoading ? (
-            <p className="text-sm text-gray-500">Cargando...</p>
-          ) : (
-            <ul className="divide-y divide-gray-100">
-              {treatments?.slice(0, 5).map((t) => (
-                <li key={t.id} className="flex items-center justify-between py-2">
-                  <span className="text-sm text-gray-900">{t.name}</span>
-                  <span className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">{t.currentStatus}</span>
-                </li>
-              ))}
-              {treatments?.length === 0 && (
-                <li className="py-2 text-sm text-gray-500">No hay tratamientos registrados.</li>
-              )}
-            </ul>
-          )}
+          <h3 className="mb-3 text-sm font-semibold text-gray-700">Distribución de riesgo</h3>
+          <div className="h-64">
+            {isLoading ? (
+              <p className="text-sm text-gray-500">Cargando...</p>
+            ) : riskData.length === 0 ? (
+              <p className="text-sm text-gray-500">No hay datos</p>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={riskData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80}>
+                    {riskData.map((entry, index) => (
+                      <Cell key={`cell-risk-${index}`} fill={riskColors[entry.name] || '#9ca3af'} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-lg bg-white p-4 shadow-sm">
+          <h3 className="mb-3 text-sm font-semibold text-gray-700">Actividad reciente (últimos 30 días)</h3>
+          <div className="h-64">
+            {isLoading ? (
+              <p className="text-sm text-gray-500">Cargando...</p>
+            ) : activityData.length === 0 ? (
+              <p className="text-sm text-gray-500">No hay datos</p>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={activityData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="count" stroke="#2563eb" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-lg bg-white p-4 shadow-sm">
+          <h3 className="mb-3 text-sm font-semibold text-gray-700">Top áreas con más tratamientos</h3>
+          <div className="h-64">
+            {isLoading ? (
+              <p className="text-sm text-gray-500">Cargando...</p>
+            ) : topAreasData.length === 0 ? (
+              <p className="text-sm text-gray-500">No hay datos</p>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={topAreasData} layout="vertical" margin={{ left: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" allowDecimals={false} />
+                  <YAxis dataKey="areaName" type="category" width={100} tick={{ fontSize: 10 }} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -139,12 +139,20 @@ Este documento define el orden exacto de construcción del sistema RAT, tareas p
 
 ---
 
-# FASE 10: DASHBOARD
+# FASE 10: DASHBOARD ✅ COMPLETADA
 
-## Tareas
-- KPIs
-- Gráficos
-- Filtros
+## Tareas realizadas
+- Endpoint `GET /reports/kpis` en backend con agregación eficiente de métricas
+- Métricas: total, pendientes, aprobados, en revisión DPO, alto riesgo, requieren EIPD, EIPD completado, con observaciones abiertas
+- Desglose por estado, desglose por nivel de riesgo, top 5 áreas, actividad reciente (30 días)
+- Instalación de `recharts` en frontend
+- Dashboard rediseñado con 8 KPIs y 4 gráficos:
+  - Pie chart de tratamientos por estado
+  - Donut chart de distribución de riesgo
+  - Línea de actividad reciente
+  - Barras horizontales de top áreas
+- Servicio `kpi.service.ts` en frontend
+- Pruebas unitarias: `reports.kpi.spec.ts` (2 tests) — todas pasan
 
 ## Prompt Kimi
 "Genera dashboard para DPO y líderes con KPIs y gráficos usando React."

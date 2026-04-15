@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as ExcelJS from 'exceljs';
 import * as puppeteer from 'puppeteer';
+import { KpiResponseDto } from './dto/kpi-response.dto';
 
 @Injectable()
 export class ReportsService {
@@ -371,5 +372,75 @@ export class ReportsService {
     await browser.close();
 
     return Buffer.from(pdfBuffer);
+  }
+
+  async getKpis(companyId: string): Promise<KpiResponseDto> {
+    const treatments = await this.prisma.treatment.findMany({
+      where: { companyId },
+      include: { area: true, observations: true, riskAssessment: true },
+    });
+
+    const totalTreatments = treatments.length;
+    const pendingStatuses = ['borrador', 'en_edicion', 'enviado', 'observado', 'en_correccion', 'subsanado'];
+    const pendingTreatments = treatments.filter(t => pendingStatuses.includes(t.currentStatus)).length;
+    const approvedTreatments = treatments.filter(t => t.currentStatus === 'aprobado').length;
+    const rejectedOrArchived = treatments.filter(t => ['rechazado', 'archivado'].includes(t.currentStatus)).length;
+    const highRiskTreatments = treatments.filter(t => t.highRiskFlag).length;
+    const requiresDpia = treatments.filter(t => t.requiresDpia).length;
+    const dpiaCompleted = treatments.filter(t => t.requiresDpia && t.dpiaStatus === 'completado').length;
+    const dpiaPending = treatments.filter(t => t.requiresDpia && t.dpiaStatus !== 'completado').length;
+    const underDpoReview = treatments.filter(t => ['enviado', 'en_revision_dpo', 'subsanado'].includes(t.currentStatus)).length;
+    const withOpenObservations = treatments.filter(t => t.observations.some(o => o.status === 'abierta')).length;
+
+    const statusBreakdown: Record<string, number> = {};
+    treatments.forEach(t => {
+      statusBreakdown[t.currentStatus] = (statusBreakdown[t.currentStatus] || 0) + 1;
+    });
+
+    const riskLevelBreakdown: Record<string, number> = {};
+    treatments.forEach(t => {
+      const level = t.riskLevel || 'sin_evaluar';
+      riskLevelBreakdown[level] = (riskLevelBreakdown[level] || 0) + 1;
+    });
+
+    const areaCounts: Record<string, { areaId: string; areaName: string; count: number }> = {};
+    treatments.forEach(t => {
+      const key = t.areaId;
+      if (!areaCounts[key]) {
+        areaCounts[key] = { areaId: t.areaId, areaName: t.area?.name || 'Sin área', count: 0 };
+      }
+      areaCounts[key].count += 1;
+    });
+    const topAreas = Object.values(areaCounts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    const last30Days = Array.from({ length: 30 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (29 - i));
+      return d.toISOString().slice(0, 10);
+    });
+
+    const recentActivity = last30Days.map(date => ({
+      date,
+      count: treatments.filter(t => t.createdAt.toISOString().slice(0, 10) === date).length,
+    }));
+
+    return {
+      totalTreatments,
+      pendingTreatments,
+      approvedTreatments,
+      rejectedOrArchived,
+      highRiskTreatments,
+      requiresDpia,
+      dpiaCompleted,
+      dpiaPending,
+      underDpoReview,
+      withOpenObservations,
+      statusBreakdown,
+      riskLevelBreakdown,
+      topAreas,
+      recentActivity,
+    };
   }
 }

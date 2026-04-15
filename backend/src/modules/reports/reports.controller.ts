@@ -38,4 +38,11 @@ export class ReportsController {
     res.setHeader('Content-Disposition', 'attachment; filename="RAT_Maestro.pdf"');
     res.send(buffer);
   }
+
+  @Get('kpis')
+  @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO', 'LEGAL_REVIEWER', 'PROCESS_LEADER', 'AUDITOR')
+  async getKpis(@Query('companyId') companyId: string, @CurrentUser() currentUser: any) {
+    const effectiveCompanyId = currentUser.role === 'SUPER_ADMIN' ? companyId : currentUser.companyId;
+    return this.reportsService.getKpis(effectiveCompanyId);
+  }
 }

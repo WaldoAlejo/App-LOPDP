@@ -99,12 +99,16 @@ Este documento define el orden exacto de construcción del sistema RAT, tareas p
 
 ---
 
-# FASE 8: RIESGO Y EIPD
+# FASE 8: RIESGO Y EIPD ✅ COMPLETADA
 
-## Tareas
-- Evaluación automática
-- Alertas
-- Flags
+## Tareas realizadas
+- Evaluación automática de riesgo en backend (`RiskAssessmentService`)
+- Criterios ponderados: datos especiales, menores, biometría, salud, decisiones automatizadas, monitoreo sistemático, gran escala, transferencia transfronteriza, alto impacto potencial
+- Flags `highRiskFlag` y `requiresDpia` actualizados automáticamente al aprobar/validar
+- Dashboard de alertas en frontend (`/risks`) con KPIs de riesgo y EIPD
+- Integración de indicadores de riesgo en el Dashboard principal
+- Sidebar actualizado con acceso a "Riesgos / EIPD"
+- Endpoints: `POST /treatments/:id/evaluate-risk` y `GET /treatments/:id/risk`
 
 ## Prompt Kimi
 "Implementa lógica de evaluación de riesgo en backend que marque tratamientos como alto riesgo según reglas definidas."

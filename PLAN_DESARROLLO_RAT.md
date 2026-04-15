@@ -126,6 +126,7 @@ Este documento define el orden exacto de construcción del sistema RAT, tareas p
 - Sidebar actualizado con acceso a "Reportes"
 - Endpoints: `GET /reports/rat-master/excel` y `GET /reports/rat-master/pdf`
 - **Corrección de relaciones en Prisma**: se agregaron las relaciones faltantes entre `Treatment` ↔ `Area`/`Process`, `TreatmentDataSubject` ↔ `DataSubjectType`, `TreatmentLegalBasis` ↔ `LegalBasis`, `TreatmentThirdParty` ↔ `ThirdParty`, `InternationalTransfer` ↔ `Country`, `TreatmentRetention` ↔ `RetentionRule`, `TreatmentSecurityMeasure` ↔ `SecurityMeasure`, `TreatmentLifecycle` ↔ `LifecyclePhase`, y las relaciones inversas en todos los modelos de catálogo.
+- **Pruebas unitarias**: `reports.service.spec.ts` (4 tests) y `reports.controller.spec.ts` (4 tests) — todas pasan.
 
 ## Prompt Kimi
 "Genera el módulo de reportes que consolide el RAT maestro y permita exportarlo a Excel y PDF."

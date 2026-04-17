@@ -15,12 +15,32 @@ export interface Treatment {
   dataCollectionChannel?: string;
   approximateVolume?: string;
   processingFrequency?: string;
+  captureSystem?: string;
+  storageSystem?: string;
+  medium?: string;
+  technologies?: string;
+  linkedDocuments?: string;
+  applications?: string;
   automatedProcessing: boolean;
   profiling: boolean;
+  profilingDescription?: string;
   automatedDecisions: boolean;
+  automatedDecisionsDescription?: string;
+  automatedDecisionsLogic?: string;
+  automatedDecisionsConsequences?: string;
+  humanInterventionAvailable: boolean;
   usesAi: boolean;
+  aiSystemDescription?: string;
   largeScaleProcessing: boolean;
   internationalTransfer: boolean;
+  treatmentResponsibleUserId?: string;
+  dpoId?: string;
+  dpoName?: string;
+  dpoContactEmail?: string;
+  dpoContactPhone?: string;
+  jointControllerId?: string;
+  jointControllerName?: string;
+  jointControllerContact?: string;
   draftLegalBasisId?: string;
   validatedLegalBasisId?: string;
   createdByUserId: string;
@@ -40,16 +60,37 @@ export interface Treatment {
   dataSubjects?: any[];
   treatmentDataItems?: any[];
   treatmentLegalBases?: any[];
+  treatmentThirdParties?: any[];
+  internationalTransfers?: any[];
+  treatmentRetention?: {
+    retentionRuleId?: string;
+    activeRetentionPeriod?: string;
+    retentionCriteria?: string;
+    legalOrContractualBasis?: string;
+    blockingApplies: boolean;
+    anonymizationApplies: boolean;
+    deletionApplies: boolean;
+    deletionMethod?: string;
+    reviewFrequency?: string;
+    responsibleRole?: string;
+    notes?: string;
+  };
+  treatmentSecurityMeasures?: any[];
+  lifecyclePhases?: any[];
   riskAssessment?: {
     usesSpecialCategories: boolean;
     involvesChildren: boolean;
+    largeScale: boolean;
+    systematicMonitoring: boolean;
+    profiling: boolean;
+    automatedDecisions: boolean;
+    videoSurveillance: boolean;
+    geolocation: boolean;
     biometricData: boolean;
     healthData: boolean;
     criminalData: boolean;
-    automatedDecisions: boolean;
-    systematicMonitoring: boolean;
+    crossBorderTransfer: boolean;
     potentialHighImpact: boolean;
-    largeScale: boolean;
   };
 }
 
@@ -66,13 +107,116 @@ export interface CreateTreatmentDto {
   dataCollectionChannel?: string;
   approximateVolume?: string;
   processingFrequency?: string;
+  captureSystem?: string;
+  storageSystem?: string;
+  medium?: string;
+  technologies?: string;
+  linkedDocuments?: string;
+  applications?: string;
+  treatmentResponsibleUserId?: string;
+  dpoId?: string;
+  dpoName?: string;
+  dpoContactEmail?: string;
+  dpoContactPhone?: string;
+  jointControllerId?: string;
+  jointControllerName?: string;
+  jointControllerContact?: string;
   automatedProcessing?: boolean;
   profiling?: boolean;
+  profilingDescription?: string;
   automatedDecisions?: boolean;
+  automatedDecisionsDescription?: string;
+  automatedDecisionsLogic?: string;
+  automatedDecisionsConsequences?: string;
+  humanInterventionAvailable?: boolean;
   usesAi?: boolean;
+  aiSystemDescription?: string;
   largeScaleProcessing?: boolean;
   internationalTransfer?: boolean;
   draftLegalBasisId?: string;
+  dataSubjects?: {
+    dataSubjectTypeId: string;
+    approximateCount?: string;
+    sourceType?: string;
+    relationshipWithCompany?: string;
+    notes?: string;
+  }[];
+  dataItems?: {
+    dataItemId: string;
+    isRequired: boolean;
+    isOptional: boolean;
+    sourceDirectOrIndirect?: string;
+    notes?: string;
+  }[];
+  legalBases?: {
+    legalBasisId: string;
+    justification?: string;
+    isMainBasis: boolean;
+  }[];
+  retention?: {
+    retentionRuleId?: string;
+    activeRetentionPeriod?: string;
+    retentionCriteria?: string;
+    legalOrContractualBasis?: string;
+    blockingApplies: boolean;
+    anonymizationApplies: boolean;
+    deletionApplies: boolean;
+    deletionMethod?: string;
+    reviewFrequency?: string;
+    responsibleRole?: string;
+    notes?: string;
+  };
+  securityMeasures?: {
+    securityMeasureId: string;
+    implemented: boolean;
+    evidence?: string;
+    criticality?: string;
+    notes?: string;
+  }[];
+  thirdParties?: {
+    thirdPartyId: string;
+    accessPurpose?: string;
+    accessedDataDescription?: string;
+    involvedDataSubjects?: string;
+    transferOutsideCountry: boolean;
+    notes?: string;
+  }[];
+  internationalTransfers?: {
+    countryId: string;
+    thirdPartyId?: string;
+    destinationName?: string;
+    transferredDataDescription?: string;
+    purpose?: string;
+    transferLegalBasis?: string;
+    safeguards?: string;
+    notes?: string;
+  }[];
+  lifecycle?: {
+    lifecyclePhaseId: string;
+    activityDescription?: string;
+    processedDataDescription?: string;
+    participants?: string;
+    mediumOrSupport?: string;
+    technologies?: string;
+    linkedDocuments?: string;
+    securityMeasuresByPhase?: string;
+    risksByPhase?: string;
+  }[];
+  riskAssessment?: {
+    usesSpecialCategories: boolean;
+    involvesChildren: boolean;
+    largeScale: boolean;
+    systematicMonitoring: boolean;
+    profiling: boolean;
+    automatedDecisions: boolean;
+    videoSurveillance: boolean;
+    geolocation: boolean;
+    biometricData: boolean;
+    healthData: boolean;
+    criminalData: boolean;
+    crossBorderTransfer: boolean;
+    potentialHighImpact: boolean;
+  };
 }
 
 export const treatmentService = {

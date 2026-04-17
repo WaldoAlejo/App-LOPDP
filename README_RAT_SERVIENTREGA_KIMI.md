@@ -57,6 +57,41 @@ La aplicación debe cubrir, como mínimo, los siguientes objetivos:
 8. Detectar automáticamente alertas y posibles tratamientos de alto riesgo.
 9. Preparar el sistema para soportar otras empresas en el futuro.
 
+## 4.1 Qué es el RAT en el contexto ecuatoriano
+
+Para este proyecto, el Registro de Actividades de Tratamiento no debe entenderse como una simple ficha operativa ni como una copia del Registro Nacional de Proteccion de Datos Personales.
+
+En Ecuador, el RAT es el instrumento interno con el que el responsable del tratamiento demuestra que conoce y gobierna sus operaciones de tratamiento. Su finalidad es permitir trazabilidad, control, gestion de riesgo y evidencia de cumplimiento bajo la LOPDP y su Reglamento.
+
+Esto implica que el sistema no debe limitarse a capturar texto libre. Debe ayudar a transformar informacion operativa de las areas en una estructura juridicamente util para el DPO y, posteriormente, para eventuales requerimientos de la autoridad.
+
+## 4.2 Cuándo debe existir el RAT
+
+Como criterio funcional para el sistema, debe asumirse que la organizacion necesita llevar RAT cuando:
+
+- tenga cien o mas trabajadores;
+- el tratamiento no sea ocasional;
+- el tratamiento pueda implicar riesgo para los derechos y libertades del titular; o
+- el tratamiento incluya categorias especiales de datos personales.
+
+En la practica, esto significa que el sistema debe diseñarse para documentar la mayoria de tratamientos corporativos recurrentes, no solo casos excepcionales.
+
+## 4.3 Contenido mínimo que el sistema debe poder demostrar
+
+El flujo RAT debe ser capaz de documentar, como minimo:
+
+1. identificacion del responsable, corresponsable si existe y delegado de proteccion de datos;
+2. fines del tratamiento;
+3. categorias de destinatarios;
+4. titulares y categorias de datos personales;
+5. uso de perfiles, cuando aplique;
+6. transferencias internacionales, cuando existan;
+7. bases de legitimacion;
+8. plazos de conservacion; y
+9. medidas tecnicas, juridicas, administrativas y organizativas.
+
+Sobre este minimo, el sistema puede y debe agregar capas de gobernanza utiles para Servientrega: ciclo de vida, trazabilidad, adjuntos, riesgo, EIPD, IA, versionado y reporteria.
+
 ---
 
 # 5. Tipo de solución requerida
@@ -305,6 +340,36 @@ Debe incluir:
 9. Si aprueba, el tratamiento se incorpora al RAT maestro.
 10. El sistema actualiza reportes, estados y trazabilidad.
 
+## 8.1 Sentido jurídico y operativo de cada paso del wizard RAT
+
+1. Identificacion: individualiza la actividad de tratamiento dentro de la organizacion. Debe vincular empresa, area, proceso, nombre del tratamiento y responsable funcional. Juridicamente sirve para saber quien trata y desde donde nace la operacion.
+2. Finalidad: define para que se tratan los datos. Es el eje del principio de finalidad y condiciona minimizacion, conservacion y base legitimadora.
+3. Titulares: identifica a quienes pertenecen los datos. No basta con decir "clientes"; debe permitir distinguir tipos de titulares y su relacion con la empresa.
+4. Datos personales tratados: especifica que categorias y datos concretos se usan. Este paso es clave para clasificar riesgo y detectar categorias especiales.
+5. Base de legitimacion: documenta el habilitante juridico del tratamiento. Debe poder justificar por que aplica esa base y cual es la principal.
+6. Sistemas, soportes y tecnologias: no es un minimo literal del articulo 38, pero es indispensable para trazabilidad, seguridad, arquitectura del dato y futura auditoria.
+7. Terceros, encargados y destinatarios: cubre a quienes reciben, acceden o intervienen en el tratamiento. Es la traduccion operativa del bloque de destinatarios del RAT.
+8. Transferencias internacionales: identifica salidas de datos fuera del Ecuador, destino, finalidad, base y salvaguardas. Es un bloque obligatorio cuando aplique.
+9. Conservacion y eliminacion: documenta por cuanto tiempo se mantienen los datos, con que criterio, y como se bloquean, anonimizar o eliminan.
+10. Medidas de seguridad: debe recoger medidas tecnicas, juridicas, administrativas y organizativas. Es un bloque obligatorio del RAT, no un accesorio.
+11. Ciclo de vida: extiende el RAT hacia una vista de extremo a extremo del tratamiento. No es minimo normativo estricto, pero es muy valioso para gobernanza y auditoria.
+12. Evaluacion preliminar de riesgo: soporta responsabilidad proactiva, alto riesgo, EIPD, gran escala, IA y decisiones automatizadas. Complementa el RAT aunque no sustituye un analisis formal cuando corresponda.
+13. Resumen y envio: consolida evidencia minima antes de pasar a control DPO. Debe funcionar como control de completitud material, no solo visual.
+
+## 8.2 Ajustes requeridos al flujo actual
+
+- El paso 1 debe ampliarse para contemplar responsable funcional del tratamiento, corresponsable cuando aplique y referencia del DPO o canal de contacto.
+- Los pasos 7, 8, 10 y 11 no pueden quedarse como placeholders si el sistema pretende sostener un RAT maestro juridicamente util.
+- El sistema debe persistir todos los bloques del wizard antes de permitir el envio a revision; de lo contrario, la regla de completitud queda rota.
+- El flujo debe distinguir entre campos minimos obligatorios del RAT y campos ampliados de gobernanza, pero ambos deben poder almacenarse.
+- El reporte maestro solo tendra valor real si su informacion nace del flujo guiado y no de cargas manuales posteriores o ediciones avanzadas separadas.
+
+## 8.3 Diferencia funcional entre RAT y RNPD
+
+- El RAT es el registro interno de control y cumplimiento del responsable.
+- El RNPD es el registro externo ante la autoridad.
+- El sistema debe construir primero un RAT robusto y, en una fase posterior, facilitar el cumplimiento del RNPD a partir de informacion ya estructurada.
+
 ---
 
 # 9. Estados del flujo
@@ -344,6 +409,12 @@ No se puede enviar un tratamiento si faltan:
 - base de legitimación;
 - conservación;
 - medidas de seguridad mínimas.
+
+Adicionalmente, cuando aplique, el sistema debe exigir:
+- destinatarios o terceros intervinientes;
+- transferencias internacionales con su soporte;
+- justificacion de perfilamiento o decisiones automatizadas; y
+- criterios de alto riesgo o necesidad de EIPD.
 
 ## 10.3 Regla de alerta por categorías especiales
 Si el usuario marca datos de salud, biometría, discapacidad, antecedentes o datos especialmente sensibles, el sistema debe activar una alerta de revisión reforzada.

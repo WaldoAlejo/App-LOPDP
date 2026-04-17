@@ -15,16 +15,21 @@ interface Props {
     };
   };
   onChange: (values: Partial<any>) => void;
+  errors?: string[];
 }
 
-export function Step9Retention({ values, onChange }: Props) {
+export function Step9Retention({ values, onChange, errors = [] }: Props) {
   const update = (field: string, value: any) => {
     onChange({ retention: { ...values.retention, [field]: value } });
   };
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-gray-900">Paso 9: Conservación y eliminación</h3>
+      <h3 className="text-lg font-semibold text-gray-900">Paso 9: Conservación y plazos de retención</h3>
+      <p className="text-sm text-gray-500">
+        Art. 38.8 Reglamento LOPDP: Plazos de conservación. Art. 10.i LOPDP: Principio de limitación del plazo de conservación.
+        Res. SPDP-SPD-2026-0005-R: Permanencia del tratamiento.
+      </p>
 
       <div className="grid gap-4 md:grid-cols-2">
         <div>
@@ -34,7 +39,7 @@ export function Step9Retention({ values, onChange }: Props) {
             value={values.retention.activeRetentionPeriod || ''}
             onChange={(e) => update('activeRetentionPeriod', e.target.value)}
             placeholder="Ej: 5 años"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${errors.some(e => e.includes('retención')) ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'}`}
           />
         </div>
         <div>

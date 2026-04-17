@@ -98,6 +98,9 @@ model User {
   role    Role     @relation(fields: [roleId], references: [id])
   area    Area?    @relation(fields: [areaId], references: [id], onDelete: SetNull)
 
+  treatmentsAsResponsible Treatment[] @relation("TreatmentResponsible")
+  treatmentsAsDpo         Treatment[] @relation("TreatmentDpo")
+
   @@map("users")
 }
 
@@ -339,15 +342,35 @@ model Treatment {
   dataCollectionChannel   String?   @map("data_collection_channel")
   approximateVolume       String?   @map("approximate_volume")
   processingFrequency     String?   @map("processing_frequency")
+  captureSystem           String?   @map("capture_system")
+  storageSystem           String?   @map("storage_system")
+  medium                  String?
+  technologies            String?
+  linkedDocuments         String?   @map("linked_documents")
+  applications            String?
   automatedProcessing     Boolean   @default(false) @map("automated_processing")
   profiling               Boolean   @default(false)
+  profilingDescription    String?   @map("profiling_description")
   automatedDecisions      Boolean   @default(false) @map("automated_decisions")
+  automatedDecisionsDescription String? @map("automated_decisions_description")
+  automatedDecisionsLogic String?   @map("automated_decisions_logic")
+  automatedDecisionsConsequences String? @map("automated_decisions_consequences")
+  humanInterventionAvailable Boolean @default(false) @map("human_intervention_available")
   usesAi                  Boolean   @default(false) @map("uses_ai")
+  aiSystemDescription     String?   @map("ai_system_description")
   largeScaleProcessing    Boolean   @default(false) @map("large_scale_processing")
   internationalTransfer   Boolean   @default(false) @map("international_transfer")
   draftLegalBasisId       String?   @map("draft_legal_basis_id")
   validatedLegalBasisId   String?   @map("validated_legal_basis_id")
   createdByUserId         String    @map("created_by_user_id")
+  treatmentResponsibleUserId String? @map("treatment_responsible_user_id")
+  dpoId                   String?   @map("dpo_id")
+  dpoName                 String?   @map("dpo_name")
+  dpoContactEmail         String?   @map("dpo_contact_email")
+  dpoContactPhone         String?   @map("dpo_contact_phone")
+  jointControllerId       String?   @map("joint_controller_id")
+  jointControllerName     String?   @map("joint_controller_name")
+  jointControllerContact  String?   @map("joint_controller_contact")
   reviewedByUserId        String?   @map("reviewed_by_user_id")
   currentStatus           String    @default("borrador") @map("current_status")
   submissionDate          DateTime? @map("submission_date")
@@ -363,6 +386,8 @@ model Treatment {
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   area    Area    @relation(fields: [areaId], references: [id], onDelete: Cascade)
   process Process @relation(fields: [processId], references: [id], onDelete: Cascade)
+  treatmentResponsibleUser User? @relation("TreatmentResponsible", fields: [treatmentResponsibleUserId], references: [id], onDelete: SetNull)
+  dpoUser User? @relation("TreatmentDpo", fields: [dpoId], references: [id], onDelete: SetNull)
 
   dataSubjects              TreatmentDataSubject[]
   treatmentDataItems        TreatmentDataItem[]

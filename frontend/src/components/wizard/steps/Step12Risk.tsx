@@ -17,6 +17,7 @@ interface Props {
     };
   };
   onChange: (values: Partial<any>) => void;
+  errors?: string[];
 }
 
 const questions = [
@@ -34,7 +35,7 @@ const questions = [
   { key: 'potentialHighImpact', label: '¿Puede afectar significativamente al titular?' },
 ];
 
-export function Step12Risk({ values, onChange }: Props) {
+export function Step12Risk({ values, onChange, errors: _errors = [] }: Props) {
   const update = (field: string, value: boolean) => {
     onChange({ riskAssessment: { ...values.riskAssessment, [field]: value } });
   };
@@ -42,6 +43,10 @@ export function Step12Risk({ values, onChange }: Props) {
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-gray-900">Paso 12: Evaluación preliminar de riesgo</h3>
+      <p className="text-sm text-gray-500">
+        Art. 40 LOPDP y Art. 41 Reglamento LOPDP: Evaluación de impacto en la protección de datos (EIPD) obligatoria para tratamientos de alto riesgo.
+        Res. SPDP-SPD-2026-0005-R: Tratamientos a gran escala. Res. SPDP-SPD-2026-0009-R: Sistemas de IA.
+      </p>
 
       <div className="grid gap-3 sm:grid-cols-2">
         {questions.map((q) => (

@@ -20,11 +20,23 @@ const sections = [
   { code: 'riesgo', label: 'Riesgo' },
 ];
 
+type ConfirmAction = 'approve' | 'observe' | 'return' | 'requestDpia' | null;
+
+const actionLabels: Record<Exclude<ConfirmAction, null>, { title: string; message: string; color: string }> = {
+  approve: { title: 'Aprobar tratamiento', message: '¿Está seguro de aprobar este tratamiento? Esta acción lo marcará como aprobado y finalizará el flujo de revisión.', color: 'bg-green-600 hover:bg-green-700' },
+  observe: { title: 'Observar tratamiento', message: '¿Está seguro de observar este tratamiento? El solicitante deberá corregir las observaciones antes de continuar.', color: 'bg-yellow-500 hover:bg-yellow-600' },
+  return: { title: 'Devolver tratamiento', message: '¿Está seguro de devolver este tratamiento? Será enviado a corrección.', color: 'bg-orange-500 hover:bg-orange-600' },
+  requestDpia: { title: 'Requerir EIPD', message: '¿Está seguro de requerir un EIPD? Este tratamiento deberá completar una evaluación de impacto en protección de datos antes de ser aprobado.', color: 'bg-red-600 hover:bg-red-700' },
+};
+
 export function ReviewDetailPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [activeSection, setActiveSection] = useState('identificacion');
   const [newObservation, setNewObservation] = useState('');
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
+  const [comment, setComment] = useState('');
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const { data: treatment, isLoading: treatmentLoading } = useQuery({
     queryKey: ['treatment', id],
@@ -43,50 +55,70 @@ export function ReviewDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['observations', id] });
       setNewObservation('');
+      setApiError(null);
     },
+    onError: (err: any) => setApiError(err?.response?.data?.message || 'Error al crear la observación'),
   });
 
   const resolveObsMutation = useMutation({
     mutationFn: reviewService.resolveObservation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['observations', id] });
+      setApiError(null);
     },
+    onError: (err: any) => setApiError(err?.response?.data?.message || 'Error al resolver la observación'),
   });
 
   const approveMutation = useMutation({
-    mutationFn: ({ treatmentId, comment }: { treatmentId: string; comment?: string }) =>
-      reviewService.approveTreatment(treatmentId, comment),
+    mutationFn: ({ treatmentId, comment: cmt }: { treatmentId: string; comment?: string }) =>
+      reviewService.approveTreatment(treatmentId, cmt),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['treatment', id] });
       queryClient.invalidateQueries({ queryKey: ['reviews', 'pending'] });
+      setConfirmAction(null);
+      setComment('');
+      setApiError(null);
     },
+    onError: (err: any) => setApiError(err?.response?.data?.message || 'Error al aprobar el tratamiento'),
   });
 
   const observeMutation = useMutation({
-    mutationFn: ({ treatmentId, comment }: { treatmentId: string; comment?: string }) =>
-      reviewService.observeTreatment(treatmentId, comment),
+    mutationFn: ({ treatmentId, comment: cmt }: { treatmentId: string; comment?: string }) =>
+      reviewService.observeTreatment(treatmentId, cmt),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['treatment', id] });
       queryClient.invalidateQueries({ queryKey: ['reviews', 'pending'] });
+      setConfirmAction(null);
+      setComment('');
+      setApiError(null);
     },
+    onError: (err: any) => setApiError(err?.response?.data?.message || 'Error al observar el tratamiento'),
   });
 
   const returnMutation = useMutation({
-    mutationFn: ({ treatmentId, comment }: { treatmentId: string; comment?: string }) =>
-      reviewService.returnTreatment(treatmentId, comment),
+    mutationFn: ({ treatmentId, comment: cmt }: { treatmentId: string; comment?: string }) =>
+      reviewService.returnTreatment(treatmentId, cmt),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['treatment', id] });
       queryClient.invalidateQueries({ queryKey: ['reviews', 'pending'] });
+      setConfirmAction(null);
+      setComment('');
+      setApiError(null);
     },
+    onError: (err: any) => setApiError(err?.response?.data?.message || 'Error al devolver el tratamiento'),
   });
 
   const requestDpiaMutation = useMutation({
-    mutationFn: ({ treatmentId, comment }: { treatmentId: string; comment?: string }) =>
-      reviewService.requestDpia(treatmentId, comment),
+    mutationFn: ({ treatmentId, comment: cmt }: { treatmentId: string; comment?: string }) =>
+      reviewService.requestDpia(treatmentId, cmt),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['treatment', id] });
       queryClient.invalidateQueries({ queryKey: ['reviews', 'pending'] });
+      setConfirmAction(null);
+      setComment('');
+      setApiError(null);
     },
+    onError: (err: any) => setApiError(err?.response?.data?.message || 'Error al requerir EIPD'),
   });
 
   if (treatmentLoading || !treatment) {
@@ -95,6 +127,27 @@ export function ReviewDetailPage() {
 
   const sectionObservations = observations?.filter((o) => o.sectionCode === activeSection) || [];
   const openObservations = observations?.filter((o) => o.status === 'abierta') || [];
+
+  const handleConfirm = () => {
+    if (!confirmAction) return;
+    const payload = { treatmentId: treatment.id, comment: comment.trim() || undefined };
+    switch (confirmAction) {
+      case 'approve':
+        approveMutation.mutate(payload);
+        break;
+      case 'observe':
+        observeMutation.mutate(payload);
+        break;
+      case 'return':
+        returnMutation.mutate(payload);
+        break;
+      case 'requestDpia':
+        requestDpiaMutation.mutate(payload);
+        break;
+    }
+  };
+
+  const isMutating = approveMutation.isPending || observeMutation.isPending || returnMutation.isPending || requestDpiaMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -105,32 +158,39 @@ export function ReviewDetailPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <button
-            onClick={() => approveMutation.mutate({ treatmentId: treatment.id })}
+            onClick={() => setConfirmAction('approve')}
             disabled={openObservations.length > 0}
             className="rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
           >
             Aprobar
           </button>
           <button
-            onClick={() => observeMutation.mutate({ treatmentId: treatment.id })}
+            onClick={() => setConfirmAction('observe')}
             className="rounded-md bg-yellow-500 px-3 py-2 text-sm font-medium text-white hover:bg-yellow-600"
           >
             Observar
           </button>
           <button
-            onClick={() => returnMutation.mutate({ treatmentId: treatment.id })}
+            onClick={() => setConfirmAction('return')}
             className="rounded-md bg-orange-500 px-3 py-2 text-sm font-medium text-white hover:bg-orange-600"
           >
             Devolver
           </button>
           <button
-            onClick={() => requestDpiaMutation.mutate({ treatmentId: treatment.id })}
+            onClick={() => setConfirmAction('requestDpia')}
             className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
           >
             Requerir EIPD
           </button>
         </div>
       </div>
+
+      {apiError && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          <p className="font-medium">Error:</p>
+          <p>{apiError}</p>
+        </div>
+      )}
 
       {openObservations.length > 0 && (
         <div className="rounded-md bg-yellow-50 p-4 text-sm text-yellow-800">
@@ -171,7 +231,6 @@ export function ReviewDetailPage() {
               {sections.find((s) => s.code === activeSection)?.label}
             </h3>
 
-            {/* Vista simplificada del contenido según sección */}
             {activeSection === 'identificacion' && (
               <dl className="grid gap-2 text-sm sm:grid-cols-2">
                 <div><dt className="text-gray-500">Nombre</dt><dd className="font-medium">{treatment.name}</dd></div>
@@ -267,6 +326,44 @@ export function ReviewDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de confirmación */}
+      {confirmAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900">{actionLabels[confirmAction].title}</h3>
+            <p className="mt-2 text-sm text-gray-600">{actionLabels[confirmAction].message}</p>
+
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700">Comentario (opcional)</label>
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={3}
+                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                placeholder="Agregue un comentario sobre esta acción..."
+              />
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => { setConfirmAction(null); setComment(''); }}
+                disabled={isMutating}
+                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={isMutating}
+                className={clsx('rounded-md px-4 py-2 text-sm font-medium text-white disabled:opacity-50', actionLabels[confirmAction].color)}
+              >
+                {isMutating ? 'Procesando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

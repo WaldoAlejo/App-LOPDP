@@ -30,6 +30,119 @@ const STATUS_FLOW: Record<string, string[]> = {
 export class TreatmentsService {
   constructor(private prisma: PrismaService, private audit: AuditService) {}
 
+  private assertAutomatedProcessingCompleteness(data: {
+    profiling?: boolean | null;
+    profilingDescription?: string | null;
+    automatedDecisions?: boolean | null;
+    automatedDecisionsDescription?: string | null;
+    automatedDecisionsLogic?: string | null;
+    automatedDecisionsConsequences?: string | null;
+    humanInterventionAvailable?: boolean | null;
+    usesAi?: boolean | null;
+    aiSystemDescription?: string | null;
+  }) {
+    if (data.profiling && !data.profilingDescription?.trim()) {
+      throw new BadRequestException('Si el tratamiento incluye perfilamiento, debe documentar su finalidad y consecuencias');
+    }
+
+    if (data.automatedDecisions) {
+      if (!data.automatedDecisionsDescription?.trim()) {
+        throw new BadRequestException('Si el tratamiento incluye decisiones automatizadas, debe documentar su descripción general');
+      }
+      if (!data.automatedDecisionsLogic?.trim()) {
+        throw new BadRequestException('Si el tratamiento incluye decisiones automatizadas, debe documentar la lógica o criterios del sistema');
+      }
+      if (!data.automatedDecisionsConsequences?.trim()) {
+        throw new BadRequestException('Si el tratamiento incluye decisiones automatizadas, debe documentar sus consecuencias para el titular');
+      }
+      if (!data.humanInterventionAvailable) {
+        throw new BadRequestException('Si el tratamiento incluye decisiones automatizadas, debe registrar la disponibilidad de intervención humana');
+      }
+    }
+
+    if (data.usesAi && !data.aiSystemDescription?.trim()) {
+      throw new BadRequestException('Si el tratamiento usa sistemas de IA, debe documentar su funcionamiento y medidas de mitigación');
+    }
+  }
+
+  private assertCrossPhaseConsistency(data: {
+    internationalTransfer?: boolean | null;
+    thirdParties?: Array<{ transferOutsideCountry?: boolean | null }>;
+    internationalTransfers?: Array<{
+      countryId?: string | null;
+      thirdPartyId?: string | null;
+      destinationName?: string | null;
+      transferredDataDescription?: string | null;
+      purpose?: string | null;
+      safeguards?: string | null;
+    }>;
+    medium?: string | null;
+    technologies?: string | null;
+    linkedDocuments?: string | null;
+    lifecycle?: Array<{
+      lifecyclePhaseId?: string | null;
+      mediumOrSupport?: string | null;
+      technologies?: string | null;
+      linkedDocuments?: string | null;
+      activityDescription?: string | null;
+    }>;
+  }) {
+    const hasInternationalTransferFlag = !!data.internationalTransfer;
+    const hasThirdPartyOutsideCountry = (data.thirdParties || []).some((item) => !!item.transferOutsideCountry);
+    const internationalTransfers = data.internationalTransfers || [];
+
+    if ((hasInternationalTransferFlag || hasThirdPartyOutsideCountry) && internationalTransfers.length === 0) {
+      throw new BadRequestException('Debe registrar transferencias internacionales cuando el tratamiento las declara o un tercero transfiere datos fuera del país');
+    }
+
+    if (internationalTransfers.length > 0 && !hasInternationalTransferFlag) {
+      throw new BadRequestException('Si registra transferencias internacionales, debe marcar el tratamiento con transferencia internacional');
+    }
+
+    const lifecycle = data.lifecycle || [];
+    const uniquePhaseIds = new Set<string>();
+    for (const phase of lifecycle) {
+      if (!phase.lifecyclePhaseId) {
+        continue;
+      }
+      if (uniquePhaseIds.has(phase.lifecyclePhaseId)) {
+        throw new BadRequestException('No se puede repetir la misma fase del ciclo de vida dentro de un tratamiento');
+      }
+      uniquePhaseIds.add(phase.lifecyclePhaseId);
+    }
+
+    const hasGeneralMedium = !!data.medium?.trim();
+    const hasGeneralTechnologies = !!data.technologies?.trim();
+    const hasGeneralLinkedDocuments = !!data.linkedDocuments?.trim();
+    const hasLifecycleMedium = lifecycle.some((item) => !!item.mediumOrSupport?.trim());
+    const hasLifecycleTechnologies = lifecycle.some((item) => !!item.technologies?.trim());
+    const hasLifecycleLinkedDocuments = lifecycle.some((item) => !!item.linkedDocuments?.trim());
+
+    if (lifecycle.length > 0 && hasGeneralMedium && !hasLifecycleMedium) {
+      throw new BadRequestException('Si registra un soporte general en tecnologías y soportes, al menos una fase del ciclo de vida debe reflejarlo');
+    }
+
+    if (lifecycle.length > 0 && hasGeneralTechnologies && !hasLifecycleTechnologies) {
+      throw new BadRequestException('Si registra tecnologías generales en el paso 6, al menos una fase del ciclo de vida debe reflejarlas');
+    }
+
+    if (lifecycle.length > 0 && hasGeneralLinkedDocuments && !hasLifecycleLinkedDocuments) {
+      throw new BadRequestException('Si registra documentos vinculados en el paso 6, al menos una fase del ciclo de vida debe referenciarlos');
+    }
+
+    if (hasLifecycleMedium && !hasGeneralMedium) {
+      throw new BadRequestException('Si detalla soportes por fase, debe registrar también un soporte general en tecnologías y soportes');
+    }
+
+    if (hasLifecycleTechnologies && !hasGeneralTechnologies) {
+      throw new BadRequestException('Si detalla tecnologías por fase, debe registrar también tecnologías generales en el paso 6');
+    }
+
+    if (hasLifecycleLinkedDocuments && !hasGeneralLinkedDocuments) {
+      throw new BadRequestException('Si detalla documentos por fase, debe registrar también documentos vinculados en el paso 6');
+    }
+  }
+
   async findAll(currentUser: any, query: { companyId?: string; areaId?: string; status?: string; search?: string }) {
     const where: any = {};
 
@@ -93,11 +206,166 @@ export class TreatmentsService {
       dto.companyId = currentUser.companyId;
     }
 
+    const {
+      dataSubjects = [],
+      dataItems = [],
+      legalBases = [],
+      retention,
+      securityMeasures = [],
+      thirdParties = [],
+      internationalTransfers = [],
+      lifecycle = [],
+      riskAssessment,
+      ...treatmentData
+    } = dto;
+
+    this.assertCrossPhaseConsistency({
+      internationalTransfer: treatmentData.internationalTransfer,
+      thirdParties,
+      internationalTransfers,
+      medium: treatmentData.medium,
+      technologies: treatmentData.technologies,
+      linkedDocuments: treatmentData.linkedDocuments,
+      lifecycle,
+    });
+    this.assertAutomatedProcessingCompleteness(treatmentData);
+
     const treatment = await this.prisma.treatment.create({
       data: {
-        ...dto,
+        ...treatmentData,
         createdByUserId: currentUser.userId,
         currentStatus: 'borrador',
+        dataSubjects: dataSubjects.length
+          ? {
+              create: dataSubjects.map((item) => ({
+                dataSubjectTypeId: item.dataSubjectTypeId,
+                approximateCount: item.approximateCount,
+                sourceType: item.sourceType,
+                relationshipWithCompany: item.relationshipWithCompany,
+                notes: item.notes,
+              })),
+            }
+          : undefined,
+        treatmentDataItems: dataItems.length
+          ? {
+              create: dataItems.map((item) => ({
+                dataItemId: item.dataItemId,
+                isRequired: item.isRequired,
+                isOptional: item.isOptional,
+                sourceDirectOrIndirect: item.sourceDirectOrIndirect,
+                notes: item.notes,
+              })),
+            }
+          : undefined,
+        treatmentLegalBases: legalBases.length
+          ? {
+              create: legalBases.map((item) => ({
+                legalBasisId: item.legalBasisId,
+                justification: item.justification,
+                isMainBasis: item.isMainBasis,
+              })),
+            }
+          : undefined,
+        treatmentRetention: retention
+          ? {
+              create: {
+                retentionRuleId: retention.retentionRuleId,
+                activeRetentionPeriod: retention.activeRetentionPeriod,
+                retentionCriteria: retention.retentionCriteria,
+                legalOrContractualBasis: retention.legalOrContractualBasis,
+                blockingApplies: retention.blockingApplies,
+                anonymizationApplies: retention.anonymizationApplies,
+                deletionApplies: retention.deletionApplies,
+                deletionMethod: retention.deletionMethod,
+                reviewFrequency: retention.reviewFrequency,
+                responsibleRole: retention.responsibleRole,
+                notes: retention.notes,
+              },
+            }
+          : undefined,
+        treatmentSecurityMeasures: securityMeasures.length
+          ? {
+              create: securityMeasures.map((item) => ({
+                securityMeasureId: item.securityMeasureId,
+                implemented: item.implemented,
+                evidence: item.evidence,
+                criticality: item.criticality,
+                notes: item.notes,
+              })),
+            }
+          : undefined,
+        treatmentThirdParties: thirdParties.length
+          ? {
+              create: thirdParties.map((item) => ({
+                thirdPartyId: item.thirdPartyId,
+                accessPurpose: item.accessPurpose,
+                accessedDataDescription: item.accessedDataDescription,
+                involvedDataSubjects: item.involvedDataSubjects,
+                transferOutsideCountry: item.transferOutsideCountry,
+                notes: item.notes,
+              })),
+            }
+          : undefined,
+        internationalTransfers: internationalTransfers.length
+          ? {
+              create: internationalTransfers.map((item) => ({
+                countryId: item.countryId,
+                thirdPartyId: item.thirdPartyId,
+                destinationName: item.destinationName,
+                transferredDataDescription: item.transferredDataDescription,
+                purpose: item.purpose,
+                transferLegalBasis: item.transferLegalBasis,
+                safeguards: item.safeguards,
+                notes: item.notes,
+              })),
+            }
+          : undefined,
+        lifecyclePhases: lifecycle.length
+          ? {
+              create: lifecycle.map((item, index) => ({
+                lifecyclePhaseId: item.lifecyclePhaseId,
+                activityDescription: item.activityDescription,
+                processedDataDescription: item.processedDataDescription,
+                participants: item.participants,
+                mediumOrSupport: item.mediumOrSupport,
+                technologies: item.technologies,
+                linkedDocuments: item.linkedDocuments,
+                securityMeasuresByPhase: item.securityMeasuresByPhase,
+                risksByPhase: item.risksByPhase,
+                phaseOrder: index + 1,
+              })),
+            }
+          : undefined,
+        riskAssessment: riskAssessment
+          ? {
+              create: {
+                usesSpecialCategories: riskAssessment.usesSpecialCategories,
+                involvesChildren: riskAssessment.involvesChildren,
+                largeScale: riskAssessment.largeScale,
+                systematicMonitoring: riskAssessment.systematicMonitoring,
+                profiling: riskAssessment.profiling,
+                automatedDecisions: riskAssessment.automatedDecisions,
+                videoSurveillance: riskAssessment.videoSurveillance,
+                geolocation: riskAssessment.geolocation,
+                biometricData: riskAssessment.biometricData,
+                healthData: riskAssessment.healthData,
+                criminalData: riskAssessment.criminalData,
+                crossBorderTransfer: riskAssessment.crossBorderTransfer,
+                potentialHighImpact: riskAssessment.potentialHighImpact,
+              },
+            }
+          : undefined,
+      },
+      include: {
+        dataSubjects: true,
+        treatmentDataItems: true,
+        treatmentLegalBases: true,
+        treatmentRetention: true,
+        treatmentSecurityMeasures: true,
+        treatmentThirdParties: true,
+        internationalTransfers: true,
+        lifecyclePhases: true,
+        riskAssessment: true,
       },
     });
 
@@ -129,9 +397,252 @@ export class TreatmentsService {
       throw new BadRequestException('No se puede editar un tratamiento en el estado actual');
     }
 
+    const {
+      dataSubjects,
+      dataItems,
+      legalBases,
+      retention,
+      securityMeasures,
+      thirdParties,
+      internationalTransfers,
+      lifecycle,
+      riskAssessment,
+      ...treatmentData
+    } = dto;
+
+    this.assertCrossPhaseConsistency({
+      internationalTransfer: treatmentData.internationalTransfer ?? treatment.internationalTransfer,
+      thirdParties: thirdParties ?? treatment.treatmentThirdParties,
+      internationalTransfers: internationalTransfers ?? treatment.internationalTransfers,
+      medium: treatmentData.medium ?? treatment.medium,
+      technologies: treatmentData.technologies ?? treatment.technologies,
+      linkedDocuments: treatmentData.linkedDocuments ?? treatment.linkedDocuments,
+      lifecycle: lifecycle ?? treatment.lifecyclePhases,
+    });
+    this.assertAutomatedProcessingCompleteness({
+      profiling: treatmentData.profiling ?? treatment.profiling,
+      profilingDescription: treatmentData.profilingDescription ?? treatment.profilingDescription,
+      automatedDecisions: treatmentData.automatedDecisions ?? treatment.automatedDecisions,
+      automatedDecisionsDescription: treatmentData.automatedDecisionsDescription ?? treatment.automatedDecisionsDescription,
+      automatedDecisionsLogic: treatmentData.automatedDecisionsLogic ?? treatment.automatedDecisionsLogic,
+      automatedDecisionsConsequences: treatmentData.automatedDecisionsConsequences ?? treatment.automatedDecisionsConsequences,
+      humanInterventionAvailable: treatmentData.humanInterventionAvailable ?? treatment.humanInterventionAvailable,
+      usesAi: treatmentData.usesAi ?? treatment.usesAi,
+      aiSystemDescription: treatmentData.aiSystemDescription ?? treatment.aiSystemDescription,
+    });
+
     const updated = await this.prisma.treatment.update({
       where: { id },
-      data: dto,
+      data: {
+        ...treatmentData,
+        dataSubjects:
+          dataSubjects !== undefined
+            ? {
+                deleteMany: {},
+                ...(dataSubjects.length
+                  ? {
+                      create: dataSubjects.map((item) => ({
+                        dataSubjectTypeId: item.dataSubjectTypeId,
+                        approximateCount: item.approximateCount,
+                        sourceType: item.sourceType,
+                        relationshipWithCompany: item.relationshipWithCompany,
+                        notes: item.notes,
+                      })),
+                    }
+                  : {}),
+              }
+            : undefined,
+        treatmentDataItems:
+          dataItems !== undefined
+            ? {
+                deleteMany: {},
+                ...(dataItems.length
+                  ? {
+                      create: dataItems.map((item) => ({
+                        dataItemId: item.dataItemId,
+                        isRequired: item.isRequired,
+                        isOptional: item.isOptional,
+                        sourceDirectOrIndirect: item.sourceDirectOrIndirect,
+                        notes: item.notes,
+                      })),
+                    }
+                  : {}),
+              }
+            : undefined,
+        treatmentLegalBases:
+          legalBases !== undefined
+            ? {
+                deleteMany: {},
+                ...(legalBases.length
+                  ? {
+                      create: legalBases.map((item) => ({
+                        legalBasisId: item.legalBasisId,
+                        justification: item.justification,
+                        isMainBasis: item.isMainBasis,
+                      })),
+                    }
+                  : {}),
+              }
+            : undefined,
+        treatmentThirdParties:
+          thirdParties !== undefined
+            ? {
+                deleteMany: {},
+                ...(thirdParties.length
+                  ? {
+                      create: thirdParties.map((item) => ({
+                        thirdPartyId: item.thirdPartyId,
+                        accessPurpose: item.accessPurpose,
+                        accessedDataDescription: item.accessedDataDescription,
+                        involvedDataSubjects: item.involvedDataSubjects,
+                        transferOutsideCountry: item.transferOutsideCountry,
+                        notes: item.notes,
+                      })),
+                    }
+                  : {}),
+              }
+            : undefined,
+        internationalTransfers:
+          internationalTransfers !== undefined
+            ? {
+                deleteMany: {},
+                ...(internationalTransfers.length
+                  ? {
+                      create: internationalTransfers.map((item) => ({
+                        countryId: item.countryId,
+                        thirdPartyId: item.thirdPartyId,
+                        destinationName: item.destinationName,
+                        transferredDataDescription: item.transferredDataDescription,
+                        purpose: item.purpose,
+                        transferLegalBasis: item.transferLegalBasis,
+                        safeguards: item.safeguards,
+                        notes: item.notes,
+                      })),
+                    }
+                  : {}),
+              }
+            : undefined,
+        treatmentSecurityMeasures:
+          securityMeasures !== undefined
+            ? {
+                deleteMany: {},
+                ...(securityMeasures.length
+                  ? {
+                      create: securityMeasures.map((item) => ({
+                        securityMeasureId: item.securityMeasureId,
+                        implemented: item.implemented,
+                        evidence: item.evidence,
+                        criticality: item.criticality,
+                        notes: item.notes,
+                      })),
+                    }
+                  : {}),
+              }
+            : undefined,
+        lifecyclePhases:
+          lifecycle !== undefined
+            ? {
+                deleteMany: {},
+                ...(lifecycle.length
+                  ? {
+                      create: lifecycle.map((item, index) => ({
+                        lifecyclePhaseId: item.lifecyclePhaseId,
+                        activityDescription: item.activityDescription,
+                        processedDataDescription: item.processedDataDescription,
+                        participants: item.participants,
+                        mediumOrSupport: item.mediumOrSupport,
+                        technologies: item.technologies,
+                        linkedDocuments: item.linkedDocuments,
+                        securityMeasuresByPhase: item.securityMeasuresByPhase,
+                        risksByPhase: item.risksByPhase,
+                        phaseOrder: index + 1,
+                      })),
+                    }
+                  : {}),
+              }
+            : undefined,
+        treatmentRetention:
+          retention !== undefined
+            ? {
+                upsert: {
+                  create: {
+                    retentionRuleId: retention.retentionRuleId,
+                    activeRetentionPeriod: retention.activeRetentionPeriod,
+                    retentionCriteria: retention.retentionCriteria,
+                    legalOrContractualBasis: retention.legalOrContractualBasis,
+                    blockingApplies: retention.blockingApplies,
+                    anonymizationApplies: retention.anonymizationApplies,
+                    deletionApplies: retention.deletionApplies,
+                    deletionMethod: retention.deletionMethod,
+                    reviewFrequency: retention.reviewFrequency,
+                    responsibleRole: retention.responsibleRole,
+                    notes: retention.notes,
+                  },
+                  update: {
+                    retentionRuleId: retention.retentionRuleId,
+                    activeRetentionPeriod: retention.activeRetentionPeriod,
+                    retentionCriteria: retention.retentionCriteria,
+                    legalOrContractualBasis: retention.legalOrContractualBasis,
+                    blockingApplies: retention.blockingApplies,
+                    anonymizationApplies: retention.anonymizationApplies,
+                    deletionApplies: retention.deletionApplies,
+                    deletionMethod: retention.deletionMethod,
+                    reviewFrequency: retention.reviewFrequency,
+                    responsibleRole: retention.responsibleRole,
+                    notes: retention.notes,
+                  },
+                },
+              }
+            : undefined,
+        riskAssessment:
+          riskAssessment !== undefined
+            ? {
+                upsert: {
+                  create: {
+                    usesSpecialCategories: riskAssessment.usesSpecialCategories,
+                    involvesChildren: riskAssessment.involvesChildren,
+                    largeScale: riskAssessment.largeScale,
+                    systematicMonitoring: riskAssessment.systematicMonitoring,
+                    profiling: riskAssessment.profiling,
+                    automatedDecisions: riskAssessment.automatedDecisions,
+                    videoSurveillance: riskAssessment.videoSurveillance,
+                    geolocation: riskAssessment.geolocation,
+                    biometricData: riskAssessment.biometricData,
+                    healthData: riskAssessment.healthData,
+                    criminalData: riskAssessment.criminalData,
+                    crossBorderTransfer: riskAssessment.crossBorderTransfer,
+                    potentialHighImpact: riskAssessment.potentialHighImpact,
+                  },
+                  update: {
+                    usesSpecialCategories: riskAssessment.usesSpecialCategories,
+                    involvesChildren: riskAssessment.involvesChildren,
+                    largeScale: riskAssessment.largeScale,
+                    systematicMonitoring: riskAssessment.systematicMonitoring,
+                    profiling: riskAssessment.profiling,
+                    automatedDecisions: riskAssessment.automatedDecisions,
+                    videoSurveillance: riskAssessment.videoSurveillance,
+                    geolocation: riskAssessment.geolocation,
+                    biometricData: riskAssessment.biometricData,
+                    healthData: riskAssessment.healthData,
+                    criminalData: riskAssessment.criminalData,
+                    crossBorderTransfer: riskAssessment.crossBorderTransfer,
+                    potentialHighImpact: riskAssessment.potentialHighImpact,
+                  },
+                },
+              }
+            : undefined,
+      },
+      include: {
+        dataSubjects: true,
+        treatmentDataItems: true,
+        treatmentLegalBases: true,
+        treatmentThirdParties: true,
+        internationalTransfers: true,
+        treatmentRetention: true,
+        treatmentSecurityMeasures: true,
+        lifecyclePhases: true,
+        riskAssessment: true,
+      },
     });
 
     await this.audit.log({
@@ -160,14 +671,28 @@ export class TreatmentsService {
       throw new BadRequestException(`No se puede cambiar de ${treatment.currentStatus} a ${newStatus}`);
     }
 
+    const openObservations = ['observado', 'subsanado', 'validado', 'aprobado'].includes(newStatus)
+      ? await this.prisma.observation.count({ where: { treatmentId: id, status: 'abierta' } })
+      : 0;
+
     // Validaciones específicas por estado
-    if (newStatus === 'aprobado') {
-      const openObservations = await this.prisma.observation.count({
-        where: { treatmentId: id, status: 'abierta' },
-      });
+    if (newStatus === 'observado' && openObservations === 0) {
+      throw new BadRequestException('No se puede marcar como observado sin registrar observaciones abiertas');
+    }
+
+    if (newStatus === 'subsanado') {
       if (openObservations > 0) {
-        throw new BadRequestException('No se puede aprobar con observaciones abiertas');
+        throw new BadRequestException('No se puede reenviar una subsanación mientras existan observaciones abiertas');
       }
+
+      const totalObservations = await this.prisma.observation.count({ where: { treatmentId: id } });
+      if (totalObservations === 0) {
+        throw new BadRequestException('No se puede marcar como subsanado un tratamiento que no haya sido observado');
+      }
+    }
+
+    if (['validado', 'aprobado'].includes(newStatus) && openObservations > 0) {
+      throw new BadRequestException(`No se puede pasar a ${newStatus} con observaciones abiertas`);
     }
 
     if (newStatus === 'enviado') {
@@ -238,8 +763,11 @@ export class TreatmentsService {
         dataSubjects: true,
         treatmentDataItems: true,
         treatmentLegalBases: true,
+        treatmentThirdParties: true,
+        internationalTransfers: true,
         treatmentRetention: true,
         treatmentSecurityMeasures: true,
+        lifecyclePhases: true,
       },
     });
 
@@ -257,6 +785,17 @@ export class TreatmentsService {
     if (missing.length > 0) {
       throw new BadRequestException(`Faltan campos obligatorios: ${missing.join(', ')}`);
     }
+
+    this.assertCrossPhaseConsistency({
+      internationalTransfer: treatment.internationalTransfer,
+      thirdParties: treatment.treatmentThirdParties,
+      internationalTransfers: treatment.internationalTransfers,
+      medium: treatment.medium,
+      technologies: treatment.technologies,
+      linkedDocuments: treatment.linkedDocuments,
+      lifecycle: treatment.lifecyclePhases,
+    });
+    this.assertAutomatedProcessingCompleteness(treatment);
   }
 
   private async evaluateRisk(treatmentId: string) {

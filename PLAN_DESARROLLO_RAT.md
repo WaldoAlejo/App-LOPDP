@@ -3,6 +3,38 @@
 ## Objetivo
 Este documento define el orden exacto de construcción del sistema RAT, tareas por fase y prompts específicos para usar con Kimi.
 
+## Criterio rector del RAT bajo la LOPDP del Ecuador
+- El RAT no es solo un formulario interno: es el instrumento de gobernanza con el que el responsable demuestra que conoce, organiza y controla sus tratamientos.
+- Debe diferenciarse del RNPD: el RAT sirve para trazabilidad interna y cumplimiento operativo; el RNPD responde a una obligación de reporte ante la autoridad.
+- Conforme al Reglamento General a la LOPDP, el RAT debe cubrir como minimo: identificacion del responsable/corresponsable/DPO, fines, destinatarios, titulares y categorias de datos, perfilamiento cuando aplique, transferencias internacionales, bases de legitimacion, plazos de conservacion y medidas tecnicas, juridicas, administrativas y organizativas.
+- La obligacion de llevar RAT no debe leerse solo por numero de trabajadores. Tambien aplica, en la practica, cuando el tratamiento no es ocasional, implica riesgo para derechos y libertades, o involucra categorias especiales de datos.
+- El flujo del sistema debe responder a responsabilidad proactiva: levantar informacion por proceso, estructurarla juridicamente, revisarla por DPO y mantenerla actualizada.
+
+## Hallazgo critico de la implementacion actual
+- El wizard ya persiste los bloques estructurados del RAT: titulares, datos tratados, bases legales, terceros, transferencias, conservacion, medidas de seguridad, ciclo de vida, riesgo y campos de gobernanza del responsable, DPO y corresponsable.
+- La brecha critica remanente no es de persistencia sino de rigor normativo y trazabilidad: deben bloquearse los envios incompletos en perfilamiento, decisiones automatizadas e IA, y debe mantenerse coherencia estricta entre observaciones DPO, correccion y subsanacion.
+- El backend no debe permitir que un tratamiento se marque como observado sin observaciones abiertas ni como subsanado/validado/aprobado mientras existan observaciones pendientes.
+- La documentacion y el flujo operativo deben reflejar este estado real: el sistema ya cubre el contenido minimo base del RAT y ahora entra en una fase de endurecimiento juridico-operativo.
+
+## Fases de ejecucion recomendadas
+
+### Fase 1. Persistencia minima exigible del RAT
+- Persistir desde el wizard: titulares, datos personales, bases de legitimacion, conservacion, medidas de seguridad y evaluacion preliminar de riesgo.
+- Hacer consistente la validacion del frontend con la validacion real del backend.
+- Objetivo: permitir que un tratamiento pueda pasar a `enviado` con informacion efectivamente almacenada.
+
+### Fase 2. Destinatarios, terceros y transferencias
+- Implementar captura y persistencia de terceros, encargados, destinatarios y transferencias internacionales.
+- Exigir pais, destinatario, datos transferidos, finalidad y salvaguardas cuando aplique.
+
+### Fase 3. Ciclo de vida, tecnologias y trazabilidad reforzada
+- Integrar ciclo de vida por fases, tecnologias, soportes y documentos vinculados.
+- Conectar estos bloques con auditoria, observaciones por seccion y vistas de revision DPO.
+
+### Fase 4. Gobierno completo y salida regulatoria
+- Incorporar responsable funcional, corresponsable si aplica, canal de contacto del DPO y datos de gobernanza faltantes.
+- Preparar salida reutilizable para RNPD y evidencia frente a la SPDP.
+
 ---
 
 # FASE 1: SETUP DEL PROYECTO
@@ -81,9 +113,25 @@ Este documento define el orden exacto de construcción del sistema RAT, tareas p
 - Formulario por pasos
 - Validaciones
 - Guardado en borrador
+- Explicar juridica y operativamente a que se refiere cada paso del RAT
+- Diferenciar claramente datos minimos obligatorios del RAT vs datos ampliados de gobernanza
 
 ## Prompt Kimi
 "Genera un wizard en React con pasos dinámicos para levantar un tratamiento con validación usando React Hook Form y Zod."
+
+---
+
+# FASE 6.5: PERSISTENCIA INTEGRAL DEL RAT Y CUMPLIMIENTO NORMATIVO
+
+## Tareas
+- Extender DTOs y servicios para guardar en una sola transaccion todos los bloques del RAT
+- Persistir desde el wizard: titulares, datos, bases legales, terceros, transferencias, conservacion, seguridad, ciclo de vida y riesgo
+- Incorporar datos del responsable funcional del tratamiento, corresponsable si aplica y referencia del DPO
+- Ajustar validaciones para que el estado `enviado` solo dependa de campos realmente capturados y persistidos
+- Alinear el flujo con el contenido minimo del articulo 38 del Reglamento y con escenarios reforzados por riesgo, gran escala, IA y transferencias
+
+## Prompt Kimi
+"Refactoriza el modulo RAT para persistir en NestJS + Prisma todos los pasos del wizard en una sola operacion transaccional, alineando validaciones y estructura con el contenido minimo del RAT exigido por el Reglamento General a la LOPDP del Ecuador."
 
 ---
 
@@ -127,51 +175,29 @@ Este documento define el orden exacto de construcción del sistema RAT, tareas p
 - Endpoints: `GET /reports/rat-master/excel` y `GET /reports/rat-master/pdf`
 - **Corrección de relaciones en Prisma**: se agregaron las relaciones faltantes entre `Treatment` ↔ `Area`/`Process`, `TreatmentDataSubject` ↔ `DataSubjectType`, `TreatmentLegalBasis` ↔ `LegalBasis`, `TreatmentThirdParty` ↔ `ThirdParty`, `InternationalTransfer` ↔ `Country`, `TreatmentRetention` ↔ `RetentionRule`, `TreatmentSecurityMeasure` ↔ `SecurityMeasure`, `TreatmentLifecycle` ↔ `LifecyclePhase`, y las relaciones inversas en todos los modelos de catálogo.
 - **Pruebas unitarias**: `reports.service.spec.ts` (4 tests) y `reports.controller.spec.ts` (4 tests) — todas pasan.
-- **Limpieza de datos mock/hardcodeados**:
-  - Eliminados scripts de seed de prueba (`seed-company.ts`, `seed-areas-processes.ts`, `seed-catalogs.ts`, `seed-treatment.ts`)
-  - `prisma/seed.ts` ahora usa `SEED_SUPERADMIN_EMAIL` y `SEED_SUPERADMIN_PASSWORD` desde variables de entorno
-  - `mail.service.ts` ya no tiene fallbacks a localhost; lanza error si falta configuración SMTP
-  - `frontend/src/services/api.ts` ya no tiene fallback a `localhost:3001`; lanza error si falta `VITE_API_URL`
-  - `auth.service.ts` reemplazó el `Map` en memoria por la tabla `RefreshToken` en PostgreSQL con migración aplicada en GCP
 
 ## Prompt Kimi
 "Genera el módulo de reportes que consolide el RAT maestro y permita exportarlo a Excel y PDF."
 
 ---
 
-# FASE 10: DASHBOARD ✅ COMPLETADA
+# FASE 10: DASHBOARD
 
-## Tareas realizadas
-- Endpoint `GET /reports/kpis` en backend con agregación eficiente de métricas
-- Métricas: total, pendientes, aprobados, en revisión DPO, alto riesgo, requieren EIPD, EIPD completado, con observaciones abiertas
-- Desglose por estado, desglose por nivel de riesgo, top 5 áreas, actividad reciente (30 días)
-- Instalación de `recharts` en frontend
-- Dashboard rediseñado con 8 KPIs y 4 gráficos:
-  - Pie chart de tratamientos por estado
-  - Donut chart de distribución de riesgo
-  - Línea de actividad reciente
-  - Barras horizontales de top áreas
-- Servicio `kpi.service.ts` en frontend
-- Pruebas unitarias: `reports.kpi.spec.ts` (2 tests) — todas pasan
+## Tareas
+- KPIs
+- Gráficos
+- Filtros
 
 ## Prompt Kimi
 "Genera dashboard para DPO y líderes con KPIs y gráficos usando React."
 
 ---
 
-# FASE 11: AUDITORÍA ✅ COMPLETADA
+# FASE 11: AUDITORÍA
 
-## Tareas realizadas
-- `AuditModule` global con `AuditService` y `AuditController`
-- `AuditInterceptor` global que captura automáticamente todas las requests POST/PATCH/PUT/DELETE
-- Auditoría manual inyectada en servicios críticos:
-  - `auth.service.ts`: login, logout, forgot password, reset password
-  - `treatments.service.ts`: crear, actualizar, cambiar estado, eliminar tratamiento
-  - `users.service.ts`: crear, actualizar, toggle status de usuario
-- Endpoint `GET /audits` con filtros (acción, entidad, fechas) y paginación
-- Página `/audits` en frontend con tabla paginada, filtros y visualización de cambios (before/after JSON)
-- Sidebar actualizado con acceso a "Auditoría"
-- Pruebas unitarias: `audit.service.spec.ts` (2 tests) y `audit.controller.spec.ts` (2 tests) — todas pasan
+## Tareas
+- Logs
+- Historial de cambios
 
 ## Prompt Kimi
 "Implementa un sistema de auditoría que registre todas las acciones críticas en base de datos."
@@ -206,15 +232,30 @@ prisma/
 4. Catálogos
 5. Tratamientos
 6. Wizard
-7. Revisión
-8. Riesgo
-9. Reportes
-10. Dashboard
-11. Auditoría
+7. Persistencia integral RAT
+8. Revisión
+9. Riesgo
+10. Reportes
+11. Dashboard
+12. Auditoría
+
+---
+
+# FLUJO RAT AJUSTADO A LOPDP ECUADOR
+
+1. Configurar empresa, areas, procesos, catalogos y responsables.
+2. Identificar cada actividad de tratamiento por proceso real, no por formulario generico.
+3. Levantar el bloque minimo del RAT exigible por el Reglamento.
+4. Completar bloques ampliados de gobernanza: tecnologias, ciclo de vida, riesgo, adjuntos y trazabilidad.
+5. Persistir todo el tratamiento antes de habilitar envio a revision.
+6. Ejecutar validaciones de completitud, riesgo y consistencia juridica.
+7. Enviar a revision DPO.
+8. Registrar observaciones, subsanacion, validacion y aprobacion.
+9. Consolidar RAT maestro y preparar evidencia para auditoria y eventuales requerimientos de la SPDP.
 
 ---
 
 # NOTA FINAL
 
-Siempre trabajar por módulos pequeños y validar antes de avanzar.
+Siempre trabajar por modulos pequenos y validar antes de avanzar. En este proyecto, la prioridad inmediata no es agregar mas pantallas, sino cerrar la brecha entre el wizard, la persistencia real y el contenido juridicamente exigible del RAT.
 

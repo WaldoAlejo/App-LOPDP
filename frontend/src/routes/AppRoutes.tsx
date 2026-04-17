@@ -36,6 +36,7 @@ export function AppRoutes() {
         <Route index element={<DashboardPage />} />
         <Route path="treatments" element={<TreatmentsPage />} />
         <Route path="treatments/new" element={<TreatmentWizardPage />} />
+        <Route path="treatments/:id/edit" element={<TreatmentWizardPage />} />
         <Route path="reviews" element={<ReviewsPage />} />
         <Route path="reviews/:id" element={<ReviewDetailPage />} />
         <Route path="risks" element={<RisksPage />} />

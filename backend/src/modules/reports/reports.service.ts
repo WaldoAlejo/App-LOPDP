@@ -56,6 +56,7 @@ export class ReportsService {
       'Código', 'Nombre', 'Versión', 'Área', 'Proceso', 'Estado', 'Nivel de riesgo',
       'Alto riesgo', 'Requiere EIPD', 'Finalidad principal', 'Finalidades secundarias',
       'Origen de datos', 'Canal de recolección', 'Volumen aproximado', 'Frecuencia',
+      'Sistema de captura', 'Sistema de almacenamiento', 'Soporte', 'Tecnologías', 'Documentos vinculados', 'Aplicativos',
       'Procesamiento automatizado', 'Perfilamiento', 'Decisiones automatizadas', 'Usa IA',
       'Gran escala', 'Transferencia internacional', 'Fecha de envío', 'Fecha de aprobación',
     ]);
@@ -64,6 +65,7 @@ export class ReportsService {
         t.code, t.name, t.version, t.area?.name, t.process?.name, t.currentStatus, t.riskLevel,
         t.highRiskFlag ? 'Sí' : 'No', t.requiresDpia ? 'Sí' : 'No', t.mainPurpose, t.secondaryPurposes,
         t.originOfData, t.dataCollectionChannel, t.approximateVolume, t.processingFrequency,
+        t.captureSystem, t.storageSystem, t.medium, t.technologies, t.linkedDocuments, t.applications,
         t.automatedProcessing ? 'Sí' : 'No', t.profiling ? 'Sí' : 'No', t.automatedDecisions ? 'Sí' : 'No', t.usesAi ? 'Sí' : 'No',
         t.largeScaleProcessing ? 'Sí' : 'No', t.internationalTransfer ? 'Sí' : 'No',
         t.submissionDate ? t.submissionDate.toISOString() : '',
@@ -271,6 +273,9 @@ export class ReportsService {
           <tr><th>Finalidades secundarias</th><td colspan="3">${t.secondaryPurposes || ''}</td></tr>
           <tr><th>Origen de datos</th><td>${t.originOfData || ''}</td><th>Canal</th><td>${t.dataCollectionChannel || ''}</td></tr>
           <tr><th>Volumen</th><td>${t.approximateVolume || ''}</td><th>Frecuencia</th><td>${t.processingFrequency || ''}</td></tr>
+          <tr><th>Captura</th><td>${t.captureSystem || ''}</td><th>Almacenamiento</th><td>${t.storageSystem || ''}</td></tr>
+          <tr><th>Soporte</th><td>${t.medium || ''}</td><th>Tecnologías</th><td>${t.technologies || ''}</td></tr>
+          <tr><th>Documentos</th><td>${t.linkedDocuments || ''}</td><th>Aplicativos</th><td>${t.applications || ''}</td></tr>
           <tr><th>Automatizado</th><td>${t.automatedProcessing ? 'Sí' : 'No'}</td><th>IA</th><td>${t.usesAi ? 'Sí' : 'No'}</td></tr>
           <tr><th>Perfilamiento</th><td>${t.profiling ? 'Sí' : 'No'}</td><th>Decisiones auto.</th><td>${t.automatedDecisions ? 'Sí' : 'No'}</td></tr>
         </table>

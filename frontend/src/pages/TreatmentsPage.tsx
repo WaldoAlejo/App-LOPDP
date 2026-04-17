@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { treatmentService } from '../services/treatment.service';
 import { useAuthStore } from '../store/authStore';
 
@@ -33,21 +34,21 @@ const statusColors: Record<string, string> = {
 };
 
 export function TreatmentsPage() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const { data: treatments, isLoading } = useQuery({
     queryKey: ['treatments'],
     queryFn: () => treatmentService.getAll({ companyId: user?.companyId }),
   });
 
+  const editableStatuses = new Set(['borrador', 'en_edicion', 'en_correccion']);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-gray-900">Tratamientos (RAT)</h2>
         <button
-          onClick={() => {
-            const nav = (window as any).navigate || ((path: string) => window.location.href = path);
-            nav('/treatments/new');
-          }}
+          onClick={() => navigate('/treatments/new')}
           className="rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
         >
           Nuevo tratamiento
@@ -64,11 +65,12 @@ export function TreatmentsPage() {
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Estado</th>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Alertas</th>
               <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Creado</th>
+              <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Acciones</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {isLoading ? (
-              <tr><td colSpan={6} className="px-4 py-4 text-center text-sm text-gray-500">Cargando...</td></tr>
+              <tr><td colSpan={7} className="px-4 py-4 text-center text-sm text-gray-500">Cargando...</td></tr>
             ) : (
               treatments?.map((t) => (
                 <tr key={t.id} className="hover:bg-gray-50">
@@ -97,6 +99,18 @@ export function TreatmentsPage() {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {new Date(t.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {editableStatuses.has(t.currentStatus) ? (
+                      <button
+                        onClick={() => navigate(`/treatments/${t.id}/edit`)}
+                        className="rounded border border-primary-200 px-3 py-1 text-xs font-medium text-primary-700 hover:bg-primary-50"
+                      >
+                        Editar
+                      </button>
+                    ) : (
+                      <span className="text-xs text-gray-400">No editable</span>
+                    )}
                   </td>
                 </tr>
               ))

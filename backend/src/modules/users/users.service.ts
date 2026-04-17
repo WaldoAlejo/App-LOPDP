@@ -60,15 +60,6 @@ export class UsersService {
     if (currentUser.roleCode !== 'SUPER_ADMIN' && user.companyId !== currentUser.companyId) {
       throw new ForbiddenException('No tienes permiso para ver este usuario');
     }
-    await this.audit.log({
-      userId: currentUser.userId,
-      companyId: user.companyId || undefined,
-      action: 'USER_CREATED',
-      entityName: 'User',
-      entityId: user.id,
-      newValuesJson: JSON.stringify({ email: user.email, roleId: user.roleId }),
-    });
-
     return user;
   }
 
@@ -89,6 +80,15 @@ export class UsersService {
         passwordHash,
       },
       include: { role: true, company: true, area: true },
+    });
+
+    await this.audit.log({
+      userId: currentUser.userId,
+      companyId: user.companyId || undefined,
+      action: 'USER_CREATED',
+      entityName: 'User',
+      entityId: user.id,
+      newValuesJson: JSON.stringify({ email: user.email, roleId: user.roleId }),
     });
 
     return user;

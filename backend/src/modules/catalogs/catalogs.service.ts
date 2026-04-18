@@ -45,7 +45,20 @@ export class CatalogsService {
     const model = this.getModel(type);
     const where: any = {};
 
-    if (companyId && type !== 'countries' && type !== 'third-party-types') {
+    // Modelos que tienen campo companyId en el schema
+    const modelsWithCompanyId = [
+      'data-subject-types',
+      'data-categories',
+      'data-items',
+      'legal-bases',
+      'third-parties',
+      'security-measures',
+      'retention-rules',
+      'lifecycle-phases',
+      'risks',
+    ];
+
+    if (companyId && modelsWithCompanyId.includes(type)) {
       where.companyId = companyId;
     }
 

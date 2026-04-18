@@ -256,10 +256,39 @@ async function loadServientregaData() {
   const identCat = await prisma.dataCategory.findFirst({ where: { companyId: company.id, code: 'IDENT' } });
   if (identCat) {
     await prisma.dataItem.create({
-      data: { dataCategoryId: identCat.id, code: 'NOMBRE', name: 'Nombre completo', isActive: true },
+      data: { companyId: company.id, dataCategoryId: identCat.id, code: 'NOMBRE', name: 'Nombre completo', isActive: true },
     });
     await prisma.dataItem.create({
-      data: { dataCategoryId: identCat.id, code: 'CEDULA', name: 'Cédula/RUC', isActive: true },
+      data: { companyId: company.id, dataCategoryId: identCat.id, code: 'CEDULA', name: 'Cédula/RUC', isActive: true },
+    });
+    await prisma.dataItem.create({
+      data: { companyId: company.id, dataCategoryId: identCat.id, code: 'EMAIL', name: 'Correo electrónico', isActive: true },
+    });
+    await prisma.dataItem.create({
+      data: { companyId: company.id, dataCategoryId: identCat.id, code: 'TELEFONO', name: 'Teléfono', isActive: true },
+    });
+    await prisma.dataItem.create({
+      data: { companyId: company.id, dataCategoryId: identCat.id, code: 'DIRECCION', name: 'Dirección', isActive: true },
+    });
+  }
+
+  const finCat = await prisma.dataCategory.findFirst({ where: { companyId: company.id, code: 'FIN' } });
+  if (finCat) {
+    await prisma.dataItem.create({
+      data: { companyId: company.id, dataCategoryId: finCat.id, code: 'CUENTA_BANC', name: 'Cuenta bancaria', isActive: true },
+    });
+    await prisma.dataItem.create({
+      data: { companyId: company.id, dataCategoryId: finCat.id, code: 'TARJETA', name: 'Tarjeta de crédito/débito', isActive: true },
+    });
+  }
+
+  const sensCat = await prisma.dataCategory.findFirst({ where: { companyId: company.id, code: 'SENS' } });
+  if (sensCat) {
+    await prisma.dataItem.create({
+      data: { companyId: company.id, dataCategoryId: sensCat.id, code: 'BIOMETRICO', name: 'Datos biométricos', isSensitive: true, isActive: true },
+    });
+    await prisma.dataItem.create({
+      data: { companyId: company.id, dataCategoryId: sensCat.id, code: 'SALUD', name: 'Datos de salud', isSensitive: true, isActive: true },
     });
   }
 
@@ -306,6 +335,65 @@ async function loadServientregaData() {
   });
 
   console.log('✅ Catálogos creados');
+
+  // Crear usuarios especiales: DPO, Security Lead, Auditor
+  console.log('\n👤 Creando usuarios especiales (DPO, Security Lead, Auditor)...');
+  
+  const dpoRole = await prisma.role.findFirst({ where: { code: 'DPO' } });
+  const securityRole = await prisma.role.findFirst({ where: { code: 'SECURITY_LEAD' } });
+  const auditorRole = await prisma.role.findFirst({ where: { code: 'AUDITOR' } });
+  const altaDireccion = await prisma.area.findFirst({ where: { companyId: company.id, name: 'ALTA DIRECCIÓN' } });
+  
+  if (dpoRole && altaDireccion) {
+    await prisma.user.create({
+      data: {
+        email: 'dpo@servientrega.com.ec',
+        firstName: 'DPO',
+        lastName: 'Servientrega',
+        passwordHash,
+        roleId: dpoRole.id,
+        companyId: company.id,
+        areaId: altaDireccion.id,
+        position: 'Delegado de Protección de Datos',
+        isActive: true,
+      },
+    }).catch(() => console.log('   ⚠️ DPO ya existe'));
+    console.log('   ✅ DPO creado: dpo@servientrega.com.ec');
+  }
+  
+  if (securityRole && altaDireccion) {
+    await prisma.user.create({
+      data: {
+        email: 'christian.diaz@servientrega.com.ec',
+        firstName: 'Christian',
+        lastName: 'Diaz',
+        passwordHash,
+        roleId: securityRole.id,
+        companyId: company.id,
+        areaId: altaDireccion.id,
+        position: 'Líder de Seguridad de la Información',
+        isActive: true,
+      },
+    }).catch(() => console.log('   ⚠️ Security Lead ya existe'));
+    console.log('   ✅ Security Lead creado: christian.diaz@servientrega.com.ec');
+  }
+  
+  if (auditorRole && altaDireccion) {
+    await prisma.user.create({
+      data: {
+        email: 'karen.reyes@servientrega.com.ec',
+        firstName: 'Karen',
+        lastName: 'Reyes',
+        passwordHash,
+        roleId: auditorRole.id,
+        companyId: company.id,
+        areaId: altaDireccion.id,
+        position: 'Auditora Interna',
+        isActive: true,
+      },
+    }).catch(() => console.log('   ⚠️ Auditor ya existe'));
+    console.log('   ✅ Auditor creado: karen.reyes@servientrega.com.ec');
+  }
 
   // Resumen final
   console.log('\n═══════════════════════════════════════════════════════════════');

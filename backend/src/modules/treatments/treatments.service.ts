@@ -153,7 +153,10 @@ export class TreatmentsService {
     }
 
     if (query.areaId) where.areaId = query.areaId;
-    if (query.status) where.currentStatus = query.status;
+    if (query.status) {
+      const statuses = query.status.split(',').map(s => s.trim()).filter(Boolean);
+      where.currentStatus = statuses.length > 1 ? { in: statuses } : statuses[0];
+    }
 
     if (query.search) {
       where.OR = [

@@ -27,6 +27,7 @@ model Company {
   users            User[]
   dataSubjectTypes DataSubjectType[]
   dataCategories   DataCategory[]
+  dataItems        DataItem[]
   legalBases       LegalBasis[]
   thirdParties     ThirdParty[]
   securityMeasures SecurityMeasure[]
@@ -177,14 +178,16 @@ model DataCategory {
 }
 
 model DataItem {
-  id             String @id @default(uuid())
-  dataCategoryId String @map("data_category_id")
+  id             String  @id @default(uuid())
+  companyId      String? @map("company_id")
+  dataCategoryId String  @map("data_category_id")
   code           String
   name           String
   description    String?
   isSensitive    Boolean @default(false) @map("is_sensitive")
   isActive       Boolean @default(true) @map("is_active")
 
+  company          Company?            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   dataCategory     DataCategory        @relation(fields: [dataCategoryId], references: [id], onDelete: Cascade)
   treatmentDataItems TreatmentDataItem[]
 

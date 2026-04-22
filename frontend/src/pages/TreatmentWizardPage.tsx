@@ -517,6 +517,16 @@ export function TreatmentWizardPage() {
     enabled: !isEditMode && !!currentUser?.companyId && !!currentUserProfile?.area?.id,
   });
 
+  const { data: codePreview, isPending: isGeneratingCode } = useQuery({
+    queryKey: ['treatment-code-preview', form.areaId, form.processId, id],
+    queryFn: () => treatmentService.getCodePreview({
+      areaId: form.areaId,
+      processId: form.processId,
+      treatmentId: id,
+    }),
+    enabled: !!form.areaId && !!form.processId,
+  });
+
   useEffect(() => {
     if (!isEditMode) {
       setForm(emptyForm);
@@ -743,7 +753,7 @@ export function TreatmentWizardPage() {
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <Step1Identification values={form} onChange={updateForm} errors={stepErrors} />;
+        return <Step1Identification values={form} onChange={updateForm} errors={stepErrors} generatedCode={codePreview?.code} isGeneratingCode={isGeneratingCode} />;
       case 2:
         return <Step2Purpose values={form} onChange={updateForm} errors={stepErrors} />;
       case 3:

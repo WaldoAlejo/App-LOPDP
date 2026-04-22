@@ -35,7 +35,7 @@ export function Topbar() {
   return (
     <header className="flex h-16 items-center justify-between border-b bg-white px-4 md:px-6">
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-gray-500 md:hidden">
+        <span className="text-sm font-medium text-servi-gray md:hidden">
           RAT Servientrega
         </span>
       </div>
@@ -43,8 +43,8 @@ export function Topbar() {
       <div className="flex items-center gap-3">
         {/* Company badge */}
         <div className="hidden items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 sm:flex">
-          <Building2 size={14} className="text-gray-500" />
-          <span className="text-xs font-medium text-gray-600">
+          <Building2 size={14} className="text-servi-gray" />
+          <span className="text-xs font-medium text-servi-gray-dark">
             {user?.companyId ? 'Servientrega' : 'Sin empresa'}
           </span>
         </div>
@@ -58,21 +58,21 @@ export function Topbar() {
               open ? 'bg-gray-100' : 'hover:bg-gray-50'
             )}
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-bold text-primary-700">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-servi-green/10 text-sm font-bold text-servi-green-dark">
               {initials}
             </div>
             <div className="hidden text-left sm:block">
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-medium text-servi-black">
                 {user?.firstName} {user?.lastName}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-servi-gray">
                 {roleLabels[user?.roleCode || ''] || user?.roleCode}
               </p>
             </div>
             <ChevronDown
               size={14}
               className={clsx(
-                'text-gray-400 transition-transform',
+                'text-servi-gray transition-transform',
                 open && 'rotate-180'
               )}
             />
@@ -81,10 +81,10 @@ export function Topbar() {
           {open && (
             <div className="absolute right-0 mt-2 w-56 rounded-lg border bg-white py-1 shadow-lg">
               <div className="border-b px-4 py-3">
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-servi-black">
                   {user?.firstName} {user?.lastName}
                 </p>
-                <p className="text-xs text-gray-500">{user?.email}</p>
+                <p className="text-xs text-servi-gray">{user?.email}</p>
               </div>
               <button
                 onClick={() => {

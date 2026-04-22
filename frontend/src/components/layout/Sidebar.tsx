@@ -57,7 +57,7 @@ export function Sidebar() {
       {/* Mobile toggle */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed left-4 top-4 z-50 rounded-lg bg-primary-600 p-2 text-white shadow-lg shadow-primary-600/30 transition-transform hover:scale-105 active:scale-95 md:hidden"
+        className="fixed left-4 top-4 z-50 rounded-lg bg-servi-green p-2 text-white shadow-lg shadow-servi-green/30 transition-transform hover:scale-105 active:scale-95 md:hidden"
         aria-label="Toggle menu"
       >
         {isOpen ? <X size={20} /> : <Menu size={20} />}
@@ -80,14 +80,14 @@ export function Sidebar() {
       >
         {/* Header */}
         <div className="flex h-16 items-center gap-3 border-b border-gray-100 px-5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 shadow-sm shadow-primary-600/20">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-servi-green shadow-sm shadow-servi-green/20">
             <Shield size={18} className="text-white" />
           </div>
           <div>
-            <span className="text-base font-bold tracking-tight text-gray-900">
+            <span className="text-base font-bold tracking-tight text-servi-black">
               RAT
             </span>
-            <span className="ml-1 text-xs font-medium text-primary-600">
+            <span className="ml-1 text-xs font-medium text-servi-green">
               Servientrega
             </span>
           </div>
@@ -105,8 +105,8 @@ export function Sidebar() {
                 className={clsx(
                   'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
                   active
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-servi-green/10 text-servi-green-dark'
+                    : 'text-servi-gray-dark hover:bg-gray-50 hover:text-servi-black'
                 )}
               >
                 <item.icon
@@ -114,13 +114,13 @@ export function Sidebar() {
                   className={clsx(
                     'transition-colors',
                     active
-                      ? 'text-primary-600'
-                      : 'text-gray-400 group-hover:text-gray-600'
+                      ? 'text-servi-green'
+                      : 'text-servi-gray group-hover:text-servi-gray-dark'
                   )}
                 />
                 {item.label}
                 {active && (
-                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary-500" />
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-servi-green" />
                 )}
               </NavLink>
             );

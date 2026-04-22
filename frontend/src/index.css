@@ -5,8 +5,10 @@
 @layer base {
   html {
     @apply antialiased;
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
   }
   body {
     @apply bg-gray-50 text-gray-900;
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
   }
 }

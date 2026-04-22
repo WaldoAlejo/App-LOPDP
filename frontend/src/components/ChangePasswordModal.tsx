@@ -46,13 +46,13 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-xl bg-amber-500 shadow-lg shadow-amber-500/25">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-xl bg-servi-green shadow-lg shadow-servi-green/25">
             <Shield size={28} className="text-white" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900">
+          <h2 className="text-xl font-bold text-servi-black">
             Cambio de contraseña obligatorio
           </h2>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-servi-gray">
             Por seguridad, debes establecer una nueva contraseña antes de continuar
           </p>
         </div>
@@ -75,7 +75,7 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
               <button
                 type="button"
                 onClick={() => setShowCurrent(!showCurrent)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-servi-gray hover:text-servi-gray-dark"
               >
                 {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -99,7 +99,7 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
               <button
                 type="button"
                 onClick={() => setShowNew(!showNew)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-servi-gray hover:text-servi-gray-dark"
               >
                 {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -123,7 +123,7 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
               <button
                 type="button"
                 onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-servi-gray hover:text-servi-gray-dark"
               >
                 {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -131,7 +131,7 @@ export function ChangePasswordModal({ isOpen, onClose }: ChangePasswordModalProp
           </div>
 
           <div className="space-y-2 rounded-lg bg-gray-50 p-4">
-            <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Requisitos</p>
+            <p className="text-xs font-semibold text-servi-gray-dark uppercase tracking-wide">Requisitos</p>
             <ValidationItem valid={validations.minLength} text="Mínimo 8 caracteres" />
             <ValidationItem valid={validations.hasUppercase} text="Al menos una mayúscula" />
             <ValidationItem valid={validations.hasLowercase} text="Al menos una minúscula" />

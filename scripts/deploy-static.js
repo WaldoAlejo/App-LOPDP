@@ -44,8 +44,9 @@ function main() {
 
   // Detectar si estamos en Linux (VM de producción) o Windows (desarrollo)
   const isLinux = process.platform === 'linux';
+  const nginxRootExists = fs.existsSync(NGINX_ROOT);
 
-  if (!isLinux) {
+  if (!isLinux && !nginxRootExists) {
     console.log('\n⚠️  Detectado entorno Windows (desarrollo)');
     console.log('   Este script solo copia archivos en Linux (servidor de producción)');
     console.log('   En Windows, el deploy se hace manualmente o vía SSH');

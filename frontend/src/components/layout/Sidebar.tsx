@@ -14,11 +14,18 @@ import {
   AlertTriangle,
   BarChart3,
   ClipboardList,
+  Shield,
 } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { useAuthStore } from '../../store/authStore';
-import { canAccessAudits, canAccessManagement, canAccessReports, canAccessReviews, canAccessRisks } from '../../utils/roleAccess';
+import {
+  canAccessAudits,
+  canAccessManagement,
+  canAccessReports,
+  canAccessReviews,
+  canAccessRisks,
+} from '../../utils/roleAccess';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', isVisible: () => true },
@@ -32,20 +39,25 @@ const navItems = [
   { to: '/processes', icon: GitBranch, label: 'Procesos', isVisible: canAccessManagement },
   { to: '/users', icon: Users, label: 'Usuarios', isVisible: canAccessManagement },
   { to: '/catalogs', icon: Library, label: 'Catálogos', isVisible: canAccessManagement },
-  { to: '/settings', icon: Settings, label: 'Configuración', isVisible: canAccessManagement },
 ];
 
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const user = useAuthStore((s) => s.user);
+  const location = useLocation();
   const visibleItems = navItems.filter((item) => item.isVisible(user?.roleCode));
+
+  const isActivePath = (path: string) => {
+    if (path === '/') return location.pathname === '/';
+    return location.pathname.startsWith(path);
+  };
 
   return (
     <>
       {/* Mobile toggle */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed left-4 top-4 z-50 rounded-md bg-primary-600 p-2 text-white md:hidden"
+        className="fixed left-4 top-4 z-50 rounded-lg bg-primary-600 p-2 text-white shadow-lg shadow-primary-600/30 transition-transform hover:scale-105 active:scale-95 md:hidden"
         aria-label="Toggle menu"
       >
         {isOpen ? <X size={20} /> : <Menu size={20} />}
@@ -54,7 +66,7 @@ export function Sidebar() {
       {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 md:hidden"
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm transition-opacity md:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -62,33 +74,65 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={clsx(
-          'fixed inset-y-0 left-0 z-40 w-64 transform bg-white shadow-lg transition-transform duration-200 md:static md:translate-x-0',
+          'fixed inset-y-0 left-0 z-40 w-64 transform border-r border-gray-200 bg-white transition-transform duration-300 ease-out md:static md:translate-x-0',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="flex h-16 items-center border-b px-6">
-          <span className="text-lg font-bold text-primary-700">RAT Servientrega</span>
+        {/* Header */}
+        <div className="flex h-16 items-center gap-3 border-b border-gray-100 px-5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 shadow-sm shadow-primary-600/20">
+            <Shield size={18} className="text-white" />
+          </div>
+          <div>
+            <span className="text-base font-bold tracking-tight text-gray-900">
+              RAT
+            </span>
+            <span className="ml-1 text-xs font-medium text-primary-600">
+              Servientrega
+            </span>
+          </div>
         </div>
-        <nav className="space-y-1 p-4">
-          {visibleItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={() => setIsOpen(false)}
-              className={({ isActive }) =>
-                clsx(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                  isActive
+
+        {/* Nav */}
+        <nav className="space-y-0.5 p-3">
+          {visibleItems.map((item) => {
+            const active = isActivePath(item.to);
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={() => setIsOpen(false)}
+                className={clsx(
+                  'group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all',
+                  active
                     ? 'bg-primary-50 text-primary-700'
-                    : 'text-gray-700 hover:bg-gray-100'
-                )
-              }
-            >
-              <item.icon size={18} />
-              {item.label}
-            </NavLink>
-          ))}
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                )}
+              >
+                <item.icon
+                  size={18}
+                  className={clsx(
+                    'transition-colors',
+                    active
+                      ? 'text-primary-600'
+                      : 'text-gray-400 group-hover:text-gray-600'
+                  )}
+                />
+                {item.label}
+                {active && (
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary-500" />
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
+
+        {/* Footer */}
+        <div className="absolute bottom-0 left-0 right-0 border-t border-gray-100 p-4">
+          <p className="text-xs text-gray-400">
+            v1.0 — LOPDP Ecuador
+          </p>
+        </div>
       </aside>
     </>
   );

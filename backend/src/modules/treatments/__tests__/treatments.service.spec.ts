@@ -59,7 +59,7 @@ describe('TreatmentsService', () => {
     companyId: 'c1',
     areaId: 'a1',
     processId: 'p1',
-    code: 'RAT-TECN-LOGI-001',
+    code: 'RAT-TE-LO-001',
     createdByUserId: 'u1',
     treatmentResponsibleUserId: 'u1',
     process: { responsibleUserId: 'u1' },
@@ -266,7 +266,7 @@ describe('TreatmentsService', () => {
             technologies: 'React, NestJS',
             linkedDocuments: 'Procedimiento de registro',
             applications: 'Portal clientes',
-            code: 'RAT-TECN-LOGI-001',
+            code: 'RAT-TE-LO-001',
           }),
         }),
       );
@@ -276,14 +276,14 @@ describe('TreatmentsService', () => {
     it('should return code preview based on area and process', async () => {
       mockPrisma.area.findUnique.mockResolvedValue({ id: 'a1', companyId: 'c1', name: 'Tecnologia' });
       mockPrisma.process.findUnique.mockResolvedValue({ id: 'p1', companyId: 'c1', areaId: 'a1', name: 'Logistica' });
-      mockPrisma.treatment.findMany.mockResolvedValue([{ code: 'RAT-TECN-LOGI-001' }, { code: 'RAT-TECN-LOGI-002' }]);
+      mockPrisma.treatment.findMany.mockResolvedValue([{ code: 'RAT-TE-LO-001' }, { code: 'RAT-TE-LO-002' }]);
 
       const result = await service.getCodePreview({ roleCode: 'DPO', userId: 'u1', companyId: 'c1' }, { areaId: 'a1', processId: 'p1' });
 
       expect(result).toEqual({
-        code: 'RAT-TECN-LOGI-003',
-        areaSegment: 'TECN',
-        processSegment: 'LOGI',
+        code: 'RAT-TE-LO-003',
+        areaSegment: 'TE',
+        processSegment: 'LO',
         sequence: 3,
       });
     });
@@ -353,14 +353,14 @@ describe('TreatmentsService', () => {
       mockPrisma.area.findUnique.mockResolvedValue({ id: 'a2', companyId: 'c1', name: 'Talento Humano' });
       mockPrisma.process.findUnique.mockResolvedValue({ id: 'p2', companyId: 'c1', areaId: 'a2', name: 'Nomina' });
       mockPrisma.treatment.findMany.mockResolvedValue([]);
-      mockPrisma.treatment.update.mockResolvedValue({ ...baseTreatment, areaId: 'a2', processId: 'p2', code: 'RAT-TALE-NOMI-001' });
+      mockPrisma.treatment.update.mockResolvedValue({ ...baseTreatment, areaId: 'a2', processId: 'p2', code: 'RAT-TH-NO-001' });
 
       const result = await service.update('t1', { areaId: 'a2', processId: 'p2', name: 'Nuevo nombre' } as any, { roleCode: 'DPO', userId: 'u1', companyId: 'c1' });
 
-      expect(result.code).toBe('RAT-TALE-NOMI-001');
+      expect(result.code).toBe('RAT-TH-NO-001');
       expect(mockPrisma.treatment.update).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ code: 'RAT-TALE-NOMI-001' }),
+          data: expect.objectContaining({ code: 'RAT-TH-NO-001' }),
         }),
       );
     });

@@ -38,12 +38,25 @@ export class TreatmentsService {
     return value
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9]/g, '')
+      .replace(/[^a-zA-Z0-9\s]/g, '')
       .toUpperCase();
   }
 
+  private getInitials(value: string): string {
+    const normalized = this.normalizeCodeToken(value);
+    const words = normalized.split(/\s+/).filter(w => w.length > 0);
+    if (words.length === 0) return 'XX';
+    if (words.length === 1) {
+      const w = words[0];
+      return w.length >= 2 ? w.slice(0, 2) : w.padEnd(2, 'X');
+    }
+    // Para nombres compuestos, tomar la primera letra de cada palabra (hasta 4 letras)
+    const initials = words.map(w => w[0]).join('');
+    return initials.slice(0, 4).padEnd(2, 'X');
+  }
+
   private buildCodeSegment(value: string) {
-    return this.normalizeCodeToken(value).slice(0, 4).padEnd(4, 'X');
+    return this.getInitials(value);
   }
 
   private extractCodeSequence(code: string, prefix: string) {
@@ -306,6 +319,10 @@ export class TreatmentsService {
   }
 
   async findAll(currentUser: any, query: { companyId?: string; areaId?: string; status?: string; search?: string }) {
+    if (!currentUser.companyId && currentUser.roleCode !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Tu usuario no está asociado a ninguna empresa. Contacta al administrador.');
+    }
+
     const where: any = this.buildAccessWhere(currentUser);
 
     if (currentUser.roleCode === 'SUPER_ADMIN' && query.companyId) {
@@ -339,6 +356,10 @@ export class TreatmentsService {
   }
 
   async findOne(id: string, currentUser: any) {
+    if (!currentUser.companyId && currentUser.roleCode !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Tu usuario no está asociado a ninguna empresa. Contacta al administrador.');
+    }
+
     const treatment = await this.prisma.treatment.findUnique({
       where: { id },
       include: {
@@ -410,6 +431,10 @@ export class TreatmentsService {
   }
 
   async create(dto: CreateTreatmentDto, currentUser: any) {
+    if (!currentUser.companyId && currentUser.roleCode !== 'SUPER_ADMIN') {
+      throw new ForbiddenException('Tu usuario no está asociado a ninguna empresa. Contacta al administrador.');
+    }
+
     if (currentUser.roleCode !== 'SUPER_ADMIN') {
       dto.companyId = currentUser.companyId;
     }

@@ -32,6 +32,11 @@ export class UsersController {
     return this.usersService.findAll(currentUser, { companyId, areaId, search, roleCode });
   }
 
+  @Get('me')
+  getMe(@CurrentUser() currentUser: any) {
+    return this.usersService.findOne(currentUser.userId, currentUser);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() currentUser: any) {
     return this.usersService.findOne(id, currentUser);

@@ -16,15 +16,15 @@ async function main() {
   });
 
   const area = await prisma.area.upsert({
-    where: { id: 'e2e-area-001' },
+    where: { id: company.id + '-area' },
     update: {},
-    create: { id: 'e2e-area-001', companyId: company.id, name: 'Area de Prueba', isActive: true }
+    create: { companyId: company.id, name: 'Tecnologia', isActive: true }
   });
 
   const process = await prisma.process.upsert({
-    where: { id: 'e2e-process-001' },
+    where: { id: company.id + '-process' },
     update: {},
-    create: { id: 'e2e-process-001', companyId: company.id, areaId: area.id, name: 'Proceso de Prueba', isActive: true }
+    create: { companyId: company.id, areaId: area.id, name: 'Logistica Digital', isActive: true }
   });
 
   const users = [
@@ -53,45 +53,45 @@ async function main() {
   }
 
   await prisma.dataSubjectType.upsert({
-    where: { id: 'e2e-dst-001' },
+    where: { id: company.id + '-dst' },
     update: {},
-    create: { id: 'e2e-dst-001', companyId: company.id, code: 'CLIENTE', name: 'Cliente', isActive: true }
+    create: { companyId: company.id, code: 'CLIENTE', name: 'Cliente', isActive: true }
   });
 
   const dataCategory = await prisma.dataCategory.upsert({
-    where: { id: 'e2e-dc-001' },
+    where: { id: company.id + '-dc' },
     update: {},
-    create: { id: 'e2e-dc-001', companyId: company.id, code: 'IDENT', name: 'Identificacion', isActive: true }
+    create: { companyId: company.id, code: 'IDENT', name: 'Identificacion', isActive: true }
   });
 
   await prisma.dataItem.upsert({
-    where: { id: 'e2e-di-001' },
+    where: { id: company.id + '-di' },
     update: {},
-    create: { id: 'e2e-di-001', dataCategoryId: dataCategory.id, code: 'NOMBRE', name: 'Nombre completo', isActive: true }
+    create: { dataCategoryId: dataCategory.id, code: 'NOMBRE', name: 'Nombre completo', isActive: true }
   });
 
   await prisma.legalBasis.upsert({
-    where: { id: 'e2e-lb-001' },
+    where: { id: company.id + '-lb' },
     update: {},
-    create: { id: 'e2e-lb-001', companyId: company.id, code: 'CONSENT', name: 'Consentimiento del titular', isActive: true }
+    create: { companyId: company.id, code: 'CONSENT', name: 'Consentimiento del titular', isActive: true }
   });
 
   await prisma.securityMeasure.upsert({
-    where: { id: 'e2e-sm-001' },
+    where: { id: company.id + '-sm' },
     update: {},
-    create: { id: 'e2e-sm-001', companyId: company.id, code: 'ENCRYPT', name: 'Cifrado de datos', category: 'Tecnica', isActive: true }
+    create: { companyId: company.id, code: 'ENCRYPT', name: 'Cifrado de datos', category: 'Tecnica', isActive: true }
   });
 
   await prisma.lifecyclePhase.upsert({
-    where: { id: 'e2e-lp-001' },
+    where: { id: company.id + '-lp' },
     update: {},
-    create: { id: 'e2e-lp-001', companyId: company.id, code: 'RECOLECCION', name: 'Recoleccion', orderIndex: 1, isActive: true }
+    create: { companyId: company.id, code: 'RECOLECCION', name: 'Recoleccion', orderIndex: 1, isActive: true }
   });
 
   await prisma.retentionRule.upsert({
-    where: { id: 'e2e-rr-001' },
+    where: { id: company.id + '-rr' },
     update: {},
-    create: { id: 'e2e-rr-001', companyId: company.id, code: '5_ANIOS', name: '5 anos', defaultTerm: '5 anos', isActive: true }
+    create: { companyId: company.id, code: '5_ANIOS', name: '5 anos', defaultTerm: '5 anos', isActive: true }
   });
 
   console.log('Company:', company.id);

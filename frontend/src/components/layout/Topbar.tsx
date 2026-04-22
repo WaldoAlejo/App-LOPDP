@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
-import { LogOut, User, ChevronDown, Building2 } from 'lucide-react';
+import { LogOut, ChevronDown, Building2 } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export function Topbar() {

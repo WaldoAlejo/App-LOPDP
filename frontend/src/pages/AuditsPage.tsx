@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { SkeletonTable } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Search, ChevronLeft, ChevronRight, ClipboardList, FilterX } from 'lucide-react';
-import { clsx } from 'clsx';
+
 
 export function AuditsPage() {
   const user = useAuthStore((s) => s.user);

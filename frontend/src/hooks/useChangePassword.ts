@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { authService, ChangePasswordDto } from '../services/auth.service';
+import { authService, type ChangePasswordDto } from '../services/auth.service';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 

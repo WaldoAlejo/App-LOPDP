@@ -3,7 +3,7 @@ import {
   Menu,
   X,
   LayoutDashboard,
-  Settings,
+
   Users,
   Building2,
   FolderTree,

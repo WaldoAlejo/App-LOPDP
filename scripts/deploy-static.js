@@ -20,12 +20,15 @@ function run(command, options = {}) {
   try {
     const output = execSync(command, {
       encoding: 'utf-8',
-      stdio: 'inherit',
+      stdio: 'pipe',
       ...options,
     });
+    if (output) console.log(output);
     return output;
   } catch (error) {
     console.error(`\n✗ Error ejecutando: ${command}`);
+    if (error.stdout) console.log(error.stdout.toString());
+    if (error.stderr) console.error(error.stderr.toString());
     throw error;
   }
 }
@@ -42,19 +45,18 @@ function main() {
     process.exit(1);
   }
 
-  // Detectar si estamos en Linux (VM de producción) o Windows (desarrollo)
-  const isLinux = process.platform === 'linux';
+  // Verificar si existe el directorio de Nginx (estamos en la VM?)
   const nginxRootExists = fs.existsSync(NGINX_ROOT);
 
-  if (!isLinux && !nginxRootExists) {
-    console.log('\n⚠️  Detectado entorno Windows (desarrollo)');
-    console.log('   Este script solo copia archivos en Linux (servidor de producción)');
-    console.log('   En Windows, el deploy se hace manualmente o vía SSH');
+  if (!nginxRootExists) {
+    console.log('\n⚠️  No se encontró /var/www/html (no estamos en el servidor Linux)');
+    console.log('   Este script solo copia archivos en el servidor de producción');
+    console.log('   En desarrollo, el deploy se hace manualmente');
     console.log('\n✓ Build completado exitosamente');
     process.exit(0);
   }
 
-  // En Linux: copiar archivos a Nginx
+  // En la VM: copiar archivos a Nginx
   console.log('\n📁 Copiando archivos del frontend a Nginx...');
 
   try {

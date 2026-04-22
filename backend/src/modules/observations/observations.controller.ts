@@ -12,19 +12,19 @@ export class ObservationsController {
   constructor(private observationsService: ObservationsService) {}
 
   @Get('treatment/:treatmentId')
-  findByTreatment(@Param('treatmentId') treatmentId: string) {
-    return this.observationsService.findByTreatment(treatmentId);
+  findByTreatment(@Param('treatmentId') treatmentId: string, @CurrentUser() currentUser: any) {
+    return this.observationsService.findByTreatment(treatmentId, currentUser);
   }
 
   @Post()
-  @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO', 'LEGAL_REVIEWER')
+  @Roles('SUPER_ADMIN', 'DPO')
   create(@Body() dto: CreateObservationDto, @CurrentUser() currentUser: any) {
     return this.observationsService.create(dto, currentUser);
   }
 
   @Patch(':id/resolve')
-  @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO', 'LEGAL_REVIEWER', 'PROCESS_LEADER')
-  resolve(@Param('id') id: string) {
-    return this.observationsService.resolve(id);
+  @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'PROCESS_LEADER', 'SUPPORT')
+  resolve(@Param('id') id: string, @CurrentUser() currentUser: any) {
+    return this.observationsService.resolve(id, currentUser);
   }
 }

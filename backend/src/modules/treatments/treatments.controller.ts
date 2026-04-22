@@ -29,6 +29,16 @@ export class TreatmentsController {
     return this.treatmentsService.findAll(currentUser, { companyId, areaId, status, search });
   }
 
+  @Get('code-preview')
+  getCodePreview(
+    @CurrentUser() currentUser: any,
+    @Query('areaId') areaId?: string,
+    @Query('processId') processId?: string,
+    @Query('treatmentId') treatmentId?: string,
+  ) {
+    return this.treatmentsService.getCodePreview(currentUser, { areaId, processId, treatmentId });
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() currentUser: any) {
     return this.treatmentsService.findOne(id, currentUser);

@@ -18,9 +18,10 @@ const steps = [
 
 interface Props {
   currentStep: number;
+  onStepSelect?: (step: number) => void;
 }
 
-export function WizardStepper({ currentStep }: Props) {
+export function WizardStepper({ currentStep, onStepSelect }: Props) {
   return (
     <div className="w-full overflow-x-auto">
       <div className="flex min-w-max items-center gap-1 px-2 py-4">
@@ -32,6 +33,8 @@ export function WizardStepper({ currentStep }: Props) {
           return (
             <div key={stepNumber} className="flex items-center">
               <button
+                type="button"
+                onClick={() => onStepSelect?.(stepNumber)}
                 className={clsx(
                   'flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
                   isActive
@@ -40,6 +43,7 @@ export function WizardStepper({ currentStep }: Props) {
                     ? 'bg-primary-100 text-primary-700'
                     : 'bg-gray-100 text-gray-500'
                 )}
+                aria-current={isActive ? 'step' : undefined}
               >
                 <span
                   className={clsx(

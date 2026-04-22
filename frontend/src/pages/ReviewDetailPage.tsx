@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { treatmentService } from '../services/treatment.service';
 import { reviewService } from '../services/review.service';
 import { clsx } from 'clsx';
+import { useAuthStore } from '../store/authStore';
 
 const sections = [
   { code: 'identificacion', label: 'Identificación' },
@@ -30,6 +31,7 @@ const actionLabels: Record<Exclude<ConfirmAction, null>, { title: string; messag
 };
 
 export function ReviewDetailPage() {
+  const user = useAuthStore((s) => s.user);
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [activeSection, setActiveSection] = useState('identificacion');
@@ -127,6 +129,13 @@ export function ReviewDetailPage() {
 
   const sectionObservations = observations?.filter((o) => o.sectionCode === activeSection) || [];
   const openObservations = observations?.filter((o) => o.status === 'abierta') || [];
+  const canExecuteReviewActions = ['SUPER_ADMIN', 'DPO'].includes(user?.roleCode || '');
+  const canCreateObservations = canExecuteReviewActions;
+  const canResolveObservations = ['SUPER_ADMIN', 'COMPANY_ADMIN', 'PROCESS_LEADER', 'SUPPORT'].includes(user?.roleCode || '');
+  const canApprove = canExecuteReviewActions && ['enviado', 'en_revision_dpo', 'subsanado', 'validado'].includes(treatment.currentStatus) && openObservations.length === 0;
+  const canObserve = canExecuteReviewActions && ['enviado', 'en_revision_dpo', 'subsanado', 'validado'].includes(treatment.currentStatus) && openObservations.length > 0;
+  const canReturn = canExecuteReviewActions && ['observado', 'subsanado'].includes(treatment.currentStatus) && openObservations.length > 0;
+  const canRequestDpia = canExecuteReviewActions && ['enviado', 'en_revision_dpo', 'subsanado', 'validado'].includes(treatment.currentStatus);
 
   const handleConfirm = () => {
     if (!confirmAction) return;
@@ -159,25 +168,28 @@ export function ReviewDetailPage() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setConfirmAction('approve')}
-            disabled={openObservations.length > 0}
+            disabled={!canApprove}
             className="rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
           >
             Aprobar
           </button>
           <button
             onClick={() => setConfirmAction('observe')}
+            disabled={!canObserve}
             className="rounded-md bg-yellow-500 px-3 py-2 text-sm font-medium text-white hover:bg-yellow-600"
           >
             Observar
           </button>
           <button
             onClick={() => setConfirmAction('return')}
+            disabled={!canReturn}
             className="rounded-md bg-orange-500 px-3 py-2 text-sm font-medium text-white hover:bg-orange-600"
           >
             Devolver
           </button>
           <button
             onClick={() => setConfirmAction('requestDpia')}
+            disabled={!canRequestDpia}
             className="rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-700"
           >
             Requerir EIPD
@@ -196,6 +208,12 @@ export function ReviewDetailPage() {
         <div className="rounded-md bg-yellow-50 p-4 text-sm text-yellow-800">
           <p className="font-medium">Este tratamiento tiene {openObservations.length} observación(es) abierta(s).</p>
           <p>No se puede aprobar hasta que se resuelvan todas las observaciones.</p>
+        </div>
+      )}
+
+      {!canExecuteReviewActions && (
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+          Este tratamiento está en modo solo lectura para tu rol. Puedes revisar el contenido y las observaciones, pero no ejecutar acciones de revisión.
         </div>
       )}
 
@@ -270,26 +288,28 @@ export function ReviewDetailPage() {
           <div className="rounded-lg bg-white p-4 shadow-sm">
             <h4 className="mb-3 text-sm font-semibold text-gray-900">Observaciones de esta sección</h4>
 
-            <div className="mb-4 flex gap-2">
-              <input
-                type="text"
-                value={newObservation}
-                onChange={(e) => setNewObservation(e.target.value)}
-                placeholder="Escriba una observación..."
-                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              />
-              <button
-                onClick={() => {
-                  if (newObservation.trim()) {
-                    createObsMutation.mutate({ treatmentId: treatment.id, sectionCode: activeSection, message: newObservation.trim() });
-                  }
-                }}
-                disabled={!newObservation.trim() || createObsMutation.isPending}
-                className="rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
-              >
-                Agregar
-              </button>
-            </div>
+            {canCreateObservations && (
+              <div className="mb-4 flex gap-2">
+                <input
+                  type="text"
+                  value={newObservation}
+                  onChange={(e) => setNewObservation(e.target.value)}
+                  placeholder="Escriba una observación..."
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                />
+                <button
+                  onClick={() => {
+                    if (newObservation.trim()) {
+                      createObsMutation.mutate({ treatmentId: treatment.id, sectionCode: activeSection, message: newObservation.trim() });
+                    }
+                  }}
+                  disabled={!newObservation.trim() || createObsMutation.isPending}
+                  className="rounded-md bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50"
+                >
+                  Agregar
+                </button>
+              </div>
+            )}
 
             <div className="space-y-2">
               {sectionObservations.length === 0 && (
@@ -307,7 +327,7 @@ export function ReviewDetailPage() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className={obs.status === 'abierta' ? 'text-yellow-900' : 'text-green-900'}>{obs.message}</p>
-                    {obs.status === 'abierta' && (
+                    {obs.status === 'abierta' && canResolveObservations && (
                       <button
                         onClick={() => resolveObsMutation.mutate(obs.id)}
                         className="whitespace-nowrap text-xs text-primary-600 hover:text-primary-700"

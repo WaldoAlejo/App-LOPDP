@@ -269,8 +269,9 @@ export class CreateTreatmentDto {
   @IsUUID()
   processId: string;
 
+  @IsOptional()
   @IsString()
-  code: string;
+  code?: string;
 
   @IsOptional()
   @IsInt()

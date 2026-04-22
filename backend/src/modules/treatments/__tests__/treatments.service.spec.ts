@@ -9,6 +9,12 @@ describe('TreatmentsService', () => {
   let prisma: PrismaService;
 
   const mockPrisma = {
+    area: {
+      findUnique: jest.fn(),
+    },
+    process: {
+      findUnique: jest.fn(),
+    },
     treatment: {
       findMany: jest.fn(),
       findUnique: jest.fn(),
@@ -51,6 +57,12 @@ describe('TreatmentsService', () => {
   const baseTreatment = {
     id: 't1',
     companyId: 'c1',
+    areaId: 'a1',
+    processId: 'p1',
+    code: 'RAT-TECN-LOGI-001',
+    createdByUserId: 'u1',
+    treatmentResponsibleUserId: 'u1',
+    process: { responsibleUserId: 'u1' },
     currentStatus: 'borrador',
     name: 'Test',
     mainPurpose: 'Purpose',
@@ -84,13 +96,15 @@ describe('TreatmentsService', () => {
 
   describe('create', () => {
     it('should create treatment with nested RAT sections and log audit', async () => {
+      mockPrisma.area.findUnique.mockResolvedValue({ id: 'a1', companyId: 'c1', name: 'Tecnologia' });
+      mockPrisma.process.findUnique.mockResolvedValue({ id: 'p1', companyId: 'c1', areaId: 'a1', name: 'Logistica' });
+      mockPrisma.treatment.findMany.mockResolvedValue([]);
       mockPrisma.treatment.create.mockResolvedValue(baseTreatment);
       mockPrisma.statusHistory.create.mockResolvedValue({});
       const dto = {
         companyId: 'c1',
         areaId: 'a1',
         processId: 'p1',
-        code: 'TRT-001',
         name: 'Test',
         mainPurpose: 'Purpose',
         captureSystem: 'Formulario web',
@@ -252,10 +266,26 @@ describe('TreatmentsService', () => {
             technologies: 'React, NestJS',
             linkedDocuments: 'Procedimiento de registro',
             applications: 'Portal clientes',
+            code: 'RAT-TECN-LOGI-001',
           }),
         }),
       );
       expect(mockAudit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'TREATMENT_CREATED' }));
+    });
+
+    it('should return code preview based on area and process', async () => {
+      mockPrisma.area.findUnique.mockResolvedValue({ id: 'a1', companyId: 'c1', name: 'Tecnologia' });
+      mockPrisma.process.findUnique.mockResolvedValue({ id: 'p1', companyId: 'c1', areaId: 'a1', name: 'Logistica' });
+      mockPrisma.treatment.findMany.mockResolvedValue([{ code: 'RAT-TECN-LOGI-001' }, { code: 'RAT-TECN-LOGI-002' }]);
+
+      const result = await service.getCodePreview({ roleCode: 'DPO', userId: 'u1', companyId: 'c1' }, { areaId: 'a1', processId: 'p1' });
+
+      expect(result).toEqual({
+        code: 'RAT-TECN-LOGI-003',
+        areaSegment: 'TECN',
+        processSegment: 'LOGI',
+        sequence: 3,
+      });
     });
   });
 
@@ -271,6 +301,8 @@ describe('TreatmentsService', () => {
         internationalTransfers: [],
         lifecyclePhases: [],
       });
+      mockPrisma.area.findUnique.mockResolvedValue({ id: 'a1', companyId: 'c1', name: 'Tecnologia' });
+      mockPrisma.process.findUnique.mockResolvedValue({ id: 'p1', companyId: 'c1', areaId: 'a1', name: 'Logistica' });
       mockPrisma.treatment.update.mockResolvedValue({ ...baseTreatment, name: 'Updated' });
       const result = await service.update(
         't1',
@@ -305,6 +337,32 @@ describe('TreatmentsService', () => {
         }),
       );
       expect(mockAudit.log).toHaveBeenCalledWith(expect.objectContaining({ action: 'TREATMENT_UPDATED' }));
+    });
+
+    it('should regenerate code when area or process changes', async () => {
+      mockPrisma.treatment.findUnique.mockResolvedValue({
+        ...baseTreatment,
+        internationalTransfer: false,
+        medium: 'Digital',
+        technologies: 'React',
+        linkedDocuments: 'Manual',
+        treatmentThirdParties: [],
+        internationalTransfers: [],
+        lifecyclePhases: [],
+      });
+      mockPrisma.area.findUnique.mockResolvedValue({ id: 'a2', companyId: 'c1', name: 'Talento Humano' });
+      mockPrisma.process.findUnique.mockResolvedValue({ id: 'p2', companyId: 'c1', areaId: 'a2', name: 'Nomina' });
+      mockPrisma.treatment.findMany.mockResolvedValue([]);
+      mockPrisma.treatment.update.mockResolvedValue({ ...baseTreatment, areaId: 'a2', processId: 'p2', code: 'RAT-TALE-NOMI-001' });
+
+      const result = await service.update('t1', { areaId: 'a2', processId: 'p2', name: 'Nuevo nombre' } as any, { roleCode: 'DPO', userId: 'u1', companyId: 'c1' });
+
+      expect(result.code).toBe('RAT-TALE-NOMI-001');
+      expect(mockPrisma.treatment.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ code: 'RAT-TALE-NOMI-001' }),
+        }),
+      );
     });
 
     it('should throw BadRequestException if status is not editable', async () => {
@@ -401,6 +459,26 @@ describe('TreatmentsService', () => {
       await expect(service.changeStatus('t1', { status: 'aprobado' } as any, { roleCode: 'DPO', userId: 'u1', companyId: 'c1' })).rejects.toThrow(BadRequestException);
     });
 
+    it('should allow approving a treatment from enviado when there are no open observations', async () => {
+      const treatment = {
+        ...baseTreatment,
+        currentStatus: 'enviado',
+        submissionDate: new Date(),
+        approvalDate: null,
+      };
+
+      mockPrisma.treatment.findUnique
+        .mockResolvedValueOnce(treatment)
+        .mockResolvedValueOnce(treatment);
+      mockPrisma.observation.count.mockResolvedValue(0);
+      mockPrisma.treatment.update.mockResolvedValue({ ...treatment, currentStatus: 'aprobado' });
+      mockPrisma.statusHistory.create.mockResolvedValue({});
+
+      const result = await service.changeStatus('t1', { status: 'aprobado' } as any, { roleCode: 'DPO', userId: 'u1', companyId: 'c1' });
+
+      expect(result.currentStatus).toBe('aprobado');
+    });
+
     it('should throw BadRequestException when moving to observado without open observations', async () => {
       mockPrisma.treatment.findUnique.mockResolvedValue({ ...baseTreatment, currentStatus: 'en_revision_dpo' });
       mockPrisma.observation.count.mockResolvedValue(0);
@@ -417,6 +495,35 @@ describe('TreatmentsService', () => {
       await expect(
         service.changeStatus('t1', { status: 'subsanado' } as any, { roleCode: 'PROCESS_LEADER', userId: 'u1', companyId: 'c1' }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should allow returning a subsanado treatment to en_correccion when there are open observations', async () => {
+      const treatment = {
+        ...baseTreatment,
+        currentStatus: 'subsanado',
+      };
+
+      mockPrisma.treatment.findUnique.mockResolvedValue(treatment);
+      mockPrisma.observation.count.mockResolvedValue(1);
+      mockPrisma.treatment.update.mockResolvedValue({ ...treatment, currentStatus: 'en_correccion' });
+      mockPrisma.statusHistory.create.mockResolvedValue({});
+
+      const result = await service.changeStatus('t1', { status: 'en_correccion' } as any, { roleCode: 'DPO', userId: 'u1', companyId: 'c1' });
+
+      expect(result.currentStatus).toBe('en_correccion');
+    });
+
+    it('should forbid auditor from approving treatments', async () => {
+      const treatment = {
+        ...baseTreatment,
+        currentStatus: 'en_revision_dpo',
+      };
+
+      mockPrisma.treatment.findUnique.mockResolvedValue(treatment);
+
+      await expect(
+        service.changeStatus('t1', { status: 'aprobado' } as any, { roleCode: 'AUDITOR', userId: 'u1', companyId: 'c1' }),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 

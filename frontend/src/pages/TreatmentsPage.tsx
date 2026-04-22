@@ -41,7 +41,7 @@ export function TreatmentsPage() {
     queryFn: () => treatmentService.getAll({ companyId: user?.companyId }),
   });
 
-  const editableStatuses = new Set(['borrador', 'en_edicion', 'en_correccion']);
+  const editableStatuses = new Set(['borrador', 'en_edicion', 'observado', 'en_correccion']);
 
   return (
     <div className="space-y-6">

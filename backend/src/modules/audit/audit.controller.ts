@@ -11,7 +11,7 @@ export class AuditController {
   constructor(private auditService: AuditService) {}
 
   @Get()
-  @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO', 'AUDITOR')
+  @Roles('SUPER_ADMIN', 'DPO', 'AUDITOR', 'SECURITY_LEAD')
   async findAll(
     @CurrentUser() currentUser: any,
     @Query('userId') userId?: string,
@@ -22,7 +22,7 @@ export class AuditController {
     @Query('skip') skip?: string,
     @Query('take') take?: string,
   ) {
-    const companyId = currentUser.role === 'SUPER_ADMIN' ? undefined : currentUser.companyId;
+    const companyId = currentUser.roleCode === 'SUPER_ADMIN' ? undefined : currentUser.companyId;
     return this.auditService.findMany({
       companyId,
       userId,

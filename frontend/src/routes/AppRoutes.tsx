@@ -15,16 +15,34 @@ import { RisksPage } from '../pages/RisksPage';
 import { ReportsPage } from '../pages/ReportsPage';
 import { AuditsPage } from '../pages/AuditsPage';
 import { useAuthStore } from '../store/authStore';
+import { canAccessAudits, canAccessManagement, canAccessReports, canAccessReviews, canAccessRisks } from '../utils/roleAccess';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return isAuthenticated ? <Navigate to="/" replace /> : <>{children}</>;
+}
+
+function RoleRoute({ children, allow }: { children: React.ReactNode; allow: (roleCode: string | undefined) => boolean }) {
+  const user = useAuthStore((s) => s.user);
+  return allow(user?.roleCode) ? <>{children}</> : <Navigate to="/" replace />;
+}
+
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
+      <Route
+        path="/login"
+        element={
+          <PublicRoute>
+            <LoginPage />
+          </PublicRoute>
+        }
+      />
       <Route
         path="/"
         element={
@@ -37,16 +55,16 @@ export function AppRoutes() {
         <Route path="treatments" element={<TreatmentsPage />} />
         <Route path="treatments/new" element={<TreatmentWizardPage />} />
         <Route path="treatments/:id/edit" element={<TreatmentWizardPage />} />
-        <Route path="reviews" element={<ReviewsPage />} />
-        <Route path="reviews/:id" element={<ReviewDetailPage />} />
-        <Route path="risks" element={<RisksPage />} />
-        <Route path="reports" element={<ReportsPage />} />
-        <Route path="audits" element={<AuditsPage />} />
-        <Route path="companies" element={<CompaniesPage />} />
-        <Route path="areas" element={<AreasPage />} />
-        <Route path="processes" element={<ProcessesPage />} />
-        <Route path="users" element={<UsersPage />} />
-        <Route path="catalogs" element={<CatalogsPage />} />
+        <Route path="reviews" element={<RoleRoute allow={canAccessReviews}><ReviewsPage /></RoleRoute>} />
+        <Route path="reviews/:id" element={<RoleRoute allow={canAccessReviews}><ReviewDetailPage /></RoleRoute>} />
+        <Route path="risks" element={<RoleRoute allow={canAccessRisks}><RisksPage /></RoleRoute>} />
+        <Route path="reports" element={<RoleRoute allow={canAccessReports}><ReportsPage /></RoleRoute>} />
+        <Route path="audits" element={<RoleRoute allow={canAccessAudits}><AuditsPage /></RoleRoute>} />
+        <Route path="companies" element={<RoleRoute allow={canAccessManagement}><CompaniesPage /></RoleRoute>} />
+        <Route path="areas" element={<RoleRoute allow={canAccessManagement}><AreasPage /></RoleRoute>} />
+        <Route path="processes" element={<RoleRoute allow={canAccessManagement}><ProcessesPage /></RoleRoute>} />
+        <Route path="users" element={<RoleRoute allow={canAccessManagement}><UsersPage /></RoleRoute>} />
+        <Route path="catalogs" element={<RoleRoute allow={canAccessManagement}><CatalogsPage /></RoleRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

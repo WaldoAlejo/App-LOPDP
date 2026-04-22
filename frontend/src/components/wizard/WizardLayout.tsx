@@ -6,6 +6,7 @@ interface Props {
   currentStep: number;
   totalSteps: number;
   children: ReactNode;
+  onStepSelect?: (step: number) => void;
   onNext: () => void;
   onPrev: () => void;
   onSaveDraft: () => void;
@@ -18,6 +19,7 @@ interface Props {
 export function WizardLayout({
   currentStep,
   children,
+  onStepSelect,
   onNext,
   onPrev,
   onSaveDraft,
@@ -28,7 +30,7 @@ export function WizardLayout({
 }: Props) {
   return (
     <div className="mx-auto max-w-5xl space-y-4">
-      <WizardStepper currentStep={currentStep} />
+      <WizardStepper currentStep={currentStep} onStepSelect={onStepSelect} />
 
       <div className="rounded-xl bg-white p-6 shadow-sm">
         {stepErrors.length > 0 && (

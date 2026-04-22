@@ -18,7 +18,6 @@ interface Props {
 
 export function Step3DataSubjects({ values, onChange, errors = [] }: Props) {
   const user = useAuthStore((s) => s.user);
-  const hasError = (field: string) => errors.some((e) => e.toLowerCase().includes(field.toLowerCase()));
   const { data: subjectTypes } = useQuery({
     queryKey: ['catalogs', 'data-subject-types'],
     queryFn: () => catalogService.getAll('data-subject-types', user?.companyId),

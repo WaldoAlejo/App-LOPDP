@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { WizardLayout } from '../components/wizard/WizardLayout';
 import { useWizard } from '../modules/treatments/useWizard';
 import { Step1Identification } from '../components/wizard/steps/Step1Identification';
@@ -16,7 +16,62 @@ import { Step10Security } from '../components/wizard/steps/Step10Security';
 import { Step11Lifecycle } from '../components/wizard/steps/Step11Lifecycle';
 import { Step12Risk } from '../components/wizard/steps/Step12Risk';
 import { Step13Summary } from '../components/wizard/steps/Step13Summary';
+import { processService } from '../services/process.service';
 import { treatmentService, type Treatment } from '../services/treatment.service';
+import { reviewService } from '../services/review.service';
+import { userService } from '../services/user.service';
+import { useAuthStore } from '../store/authStore';
+
+const STEP_SECTION_MAP: Record<number, string> = {
+  1: 'identificacion',
+  2: 'finalidad',
+  3: 'titulares',
+  4: 'datos',
+  5: 'base_legal',
+  6: 'tecnologias',
+  7: 'terceros',
+  8: 'transferencias',
+  9: 'conservacion',
+  10: 'seguridad',
+  11: 'ciclo_vida',
+  12: 'riesgo',
+};
+
+function normalizeSearchText(value: string | undefined) {
+  return (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase();
+}
+
+function getProcessMatchScore(processName: string, userPosition: string | undefined) {
+  const normalizedProcess = normalizeSearchText(processName);
+  const normalizedPosition = normalizeSearchText(userPosition);
+
+  if (!normalizedProcess || !normalizedPosition) {
+    return 0;
+  }
+
+  const processTokens = normalizedProcess.split(/[^A-Z0-9]+/).filter((token) => token.length >= 4);
+  const positionTokens = normalizedPosition.split(/[^A-Z0-9]+/).filter((token) => token.length >= 4);
+
+  let score = 0;
+
+  for (const processToken of processTokens) {
+    for (const positionToken of positionTokens) {
+      if (processToken === positionToken) {
+        score += 3;
+        continue;
+      }
+
+      if (processToken.includes(positionToken) || positionToken.includes(processToken)) {
+        score += 2;
+      }
+    }
+  }
+
+  return score;
+}
 
 export interface WizardForm {
   companyId: string;
@@ -336,6 +391,8 @@ function validateStep(step: number, form: WizardForm): string[] {
 }
 
 function mapTreatmentToForm(treatment: Treatment): WizardForm {
+  const retention = treatment.treatmentRetention;
+
   return {
     companyId: treatment.companyId,
     areaId: treatment.areaId,
@@ -362,17 +419,17 @@ function mapTreatmentToForm(treatment: Treatment): WizardForm {
     thirdParties: treatment.treatmentThirdParties || [],
     hasInternationalTransfers: (treatment.internationalTransfers?.length || 0) > 0,
     internationalTransfers: treatment.internationalTransfers || [],
-    retention: treatment.treatmentRetention || {
-      activeRetentionPeriod: '',
-      retentionCriteria: '',
-      legalOrContractualBasis: '',
-      blockingApplies: false,
-      anonymizationApplies: false,
-      deletionApplies: false,
-      deletionMethod: '',
-      reviewFrequency: '',
-      responsibleRole: '',
-      notes: '',
+    retention: {
+      activeRetentionPeriod: retention?.activeRetentionPeriod || '',
+      retentionCriteria: retention?.retentionCriteria || '',
+      legalOrContractualBasis: retention?.legalOrContractualBasis || '',
+      blockingApplies: retention?.blockingApplies || false,
+      anonymizationApplies: retention?.anonymizationApplies || false,
+      deletionApplies: retention?.deletionApplies || false,
+      deletionMethod: retention?.deletionMethod || '',
+      reviewFrequency: retention?.reviewFrequency || '',
+      responsibleRole: retention?.responsibleRole || '',
+      notes: retention?.notes || '',
     },
     securityMeasures: treatment.treatmentSecurityMeasures || [],
     lifecycle: [...(treatment.lifecyclePhases || [])].sort((a, b) => a.phaseOrder - b.phaseOrder),
@@ -416,29 +473,132 @@ function mapTreatmentToForm(treatment: Treatment): WizardForm {
 
 export function TreatmentWizardPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const currentUser = useAuthStore((s) => s.user);
   const { id } = useParams();
   const isEditMode = !!id;
-  const { currentStep, totalSteps, nextStep, prevStep, isFirstStep, isLastStep } = useWizard();
+  const { currentStep, totalSteps, goToStep, nextStep, prevStep, isFirstStep, isLastStep } = useWizard();
   const [form, setForm] = useState<WizardForm>(emptyForm);
   const [stepErrors, setStepErrors] = useState<string[]>([]);
+  const [isFormReady, setIsFormReady] = useState(!isEditMode);
 
-  const { data: treatment, isLoading: isLoadingTreatment } = useQuery({
-    queryKey: ['treatment', id],
+  const {
+    data: treatment,
+    isPending: isLoadingTreatment,
+    isError: hasTreatmentError,
+    error: treatmentError,
+  } = useQuery({
+    queryKey: ['treatment-edit', id],
     queryFn: () => treatmentService.getOne(id!),
-    enabled: isEditMode,
+    enabled: isEditMode && !!id,
   });
+
+  const { data: observations = [] } = useQuery({
+    queryKey: ['treatment-observations', id],
+    queryFn: () => reviewService.getObservations(id!),
+    enabled: isEditMode && !!id,
+  });
+
+  const { data: currentUserProfile } = useQuery({
+    queryKey: ['current-user-profile', currentUser?.id],
+    queryFn: () => userService.getOne(currentUser!.id),
+    enabled: !isEditMode && !!currentUser?.id,
+  });
+
+  const { data: companyUsers = [] } = useQuery({
+    queryKey: ['wizard-company-users', currentUser?.companyId],
+    queryFn: () => userService.getAll({ companyId: currentUser!.companyId! }),
+    enabled: !isEditMode && !!currentUser?.companyId,
+  });
+
+  const { data: areaProcesses = [] } = useQuery({
+    queryKey: ['wizard-area-processes', currentUser?.companyId, currentUserProfile?.area?.id],
+    queryFn: () => processService.getAll({ companyId: currentUser!.companyId, areaId: currentUserProfile!.area!.id }),
+    enabled: !isEditMode && !!currentUser?.companyId && !!currentUserProfile?.area?.id,
+  });
+
+  useEffect(() => {
+    if (!isEditMode) {
+      setForm(emptyForm);
+      setIsFormReady(true);
+      return;
+    }
+
+    setForm(emptyForm);
+    setIsFormReady(false);
+  }, [id, isEditMode]);
 
   useEffect(() => {
     if (treatment) {
       setForm(mapTreatmentToForm(treatment));
+      setIsFormReady(true);
     }
-  }, [treatment]);
+  }, [treatment?.id]);
+
+  useEffect(() => {
+    if (isEditMode || !currentUser) {
+      return;
+    }
+
+    const dpoUser = companyUsers.find((user) => user.role?.code === 'DPO') || null;
+    const exactResponsibleProcess = areaProcesses.find((process) => process.responsibleUserId === currentUser.id) || null;
+    const scoredProcesses = areaProcesses
+      .map((process) => ({
+        process,
+        score: getProcessMatchScore(process.name, currentUserProfile?.position),
+      }))
+      .filter((item) => item.score > 0)
+      .sort((left, right) => right.score - left.score);
+    const inferredProcess = exactResponsibleProcess
+      || (scoredProcesses.length === 1 ? scoredProcesses[0].process : null)
+      || (areaProcesses.length === 1 ? areaProcesses[0] : null);
+    const shouldAutofillResponsible = currentUser.roleCode === 'PROCESS_LEADER';
+    const nextCompanyId = currentUser.companyId || '';
+    const nextAreaId = currentUserProfile?.area?.id || '';
+    const nextProcessId = inferredProcess?.id || '';
+    const nextResponsibleUserId = shouldAutofillResponsible ? currentUser.id : '';
+    const nextDpoId = dpoUser?.id || '';
+    const nextDpoName = dpoUser ? `${dpoUser.firstName} ${dpoUser.lastName}` : '';
+    const nextDpoContactEmail = dpoUser?.email || '';
+    const nextDpoContactPhone = dpoUser?.phone || '';
+
+    setForm((prev) => {
+      const updated = {
+        ...prev,
+        companyId: prev.companyId || nextCompanyId,
+        areaId: prev.areaId || nextAreaId,
+        processId: prev.processId || nextProcessId,
+        treatmentResponsibleUserId: prev.treatmentResponsibleUserId || nextResponsibleUserId,
+        dpoId: prev.dpoId || nextDpoId,
+        dpoName: prev.dpoName || nextDpoName,
+        dpoContactEmail: prev.dpoContactEmail || nextDpoContactEmail,
+        dpoContactPhone: prev.dpoContactPhone || nextDpoContactPhone,
+      };
+
+      if (
+        updated.companyId === prev.companyId
+        && updated.areaId === prev.areaId
+        && updated.processId === prev.processId
+        && updated.treatmentResponsibleUserId === prev.treatmentResponsibleUserId
+        && updated.dpoId === prev.dpoId
+        && updated.dpoName === prev.dpoName
+        && updated.dpoContactEmail === prev.dpoContactEmail
+        && updated.dpoContactPhone === prev.dpoContactPhone
+      ) {
+        return prev;
+      }
+
+      return updated;
+    });
+  }, [isEditMode, currentUser?.id, currentUser?.companyId, currentUser?.roleCode, currentUserProfile?.area?.id, currentUserProfile?.position, companyUsers, areaProcesses]);
 
   const saveMutation = useMutation({
     mutationFn: (payload: any) => (isEditMode ? treatmentService.update(id!, payload) : treatmentService.create(payload)),
     onSuccess: async (data) => {
       if (isLastStep) {
-        const nextStatus = isEditMode && treatment?.currentStatus === 'en_correccion' ? 'subsanado' : 'enviado';
+        const nextStatus = isEditMode && ['observado', 'en_correccion'].includes(treatment?.currentStatus || '')
+          ? 'subsanado'
+          : 'enviado';
         await treatmentService.changeStatus(data.id, nextStatus);
         navigate('/treatments');
       } else {
@@ -447,6 +607,35 @@ export function TreatmentWizardPage() {
     },
     onError: (err: any) => {
       setStepErrors([err?.response?.data?.message || 'Error al guardar el tratamiento. Intente nuevamente.']);
+    },
+  });
+
+  const startCorrectionMutation = useMutation({
+    mutationFn: () => treatmentService.changeStatus(id!, 'en_correccion', 'Inicio de corrección por líder de proceso'),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['treatment-edit', id] }),
+        queryClient.invalidateQueries({ queryKey: ['treatments'] }),
+      ]);
+      setStepErrors([]);
+    },
+    onError: (err: any) => {
+      setStepErrors([err?.response?.data?.message || 'No se pudo iniciar la corrección del tratamiento.']);
+    },
+  });
+
+  const resolveObservationMutation = useMutation({
+    mutationFn: (observationId: string) => reviewService.resolveObservation(observationId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['treatment-observations', id] }),
+        queryClient.invalidateQueries({ queryKey: ['treatments'] }),
+        queryClient.invalidateQueries({ queryKey: ['treatment-edit', id] }),
+      ]);
+      setStepErrors([]);
+    },
+    onError: (err: any) => {
+      setStepErrors([err?.response?.data?.message || 'No se pudo cerrar la observación.']);
     },
   });
 
@@ -518,9 +707,38 @@ export function TreatmentWizardPage() {
     }
   };
 
+  const handleStepSelect = (targetStep: number) => {
+    if (targetStep === currentStep) {
+      return;
+    }
+
+    if (targetStep < currentStep) {
+      setStepErrors([]);
+      goToStep(targetStep);
+      return;
+    }
+
+    const errors = validateStep(currentStep, form);
+    if (errors.length > 0) {
+      setStepErrors(errors);
+      return;
+    }
+
+    setStepErrors([]);
+    goToStep(targetStep);
+  };
+
   const updateForm = (values: Partial<WizardForm>) => {
     setForm((prev) => ({ ...prev, ...values }));
   };
+
+  const activeSectionCode = STEP_SECTION_MAP[currentStep];
+  const openObservations = observations.filter((obs) => obs.status === 'abierta');
+  const currentSectionObservations = activeSectionCode
+    ? openObservations.filter((obs) => obs.sectionCode === activeSectionCode)
+    : [];
+  const canStartCorrection = treatment?.currentStatus === 'observado' && openObservations.length > 0;
+  const canResolveObservations = treatment?.currentStatus === 'en_correccion';
 
   const renderStep = () => {
     switch (currentStep) {
@@ -555,23 +773,84 @@ export function TreatmentWizardPage() {
     }
   };
 
-  if (isEditMode && isLoadingTreatment) {
+  if (isEditMode && (isLoadingTreatment || !isFormReady)) {
     return <div className="p-4 text-sm text-gray-500">Cargando tratamiento...</div>;
+  }
+
+  if (isEditMode && hasTreatmentError) {
+    return (
+      <div className="p-4 text-sm text-red-600">
+        {(treatmentError as any)?.response?.data?.message || 'No se pudo cargar el tratamiento para edición.'}
+      </div>
+    );
   }
 
   return (
     <div className="p-4 md:p-6">
+      {isEditMode && treatment && openObservations.length > 0 && (
+        <div className="mb-4 rounded-md border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-900">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="font-medium">Este tratamiento tiene {openObservations.length} observación(es) abierta(s).</p>
+              <p>
+                {canStartCorrection
+                  ? 'Debe iniciar la corrección para poder cerrar observaciones y reenviar la subsanación.'
+                  : canResolveObservations
+                    ? 'Cierre las observaciones corregidas antes de reenviar el tratamiento como subsanado.'
+                    : 'Revise las observaciones antes de continuar con la edición.'}
+              </p>
+            </div>
+            {canStartCorrection && (
+              <button
+                type="button"
+                onClick={() => startCorrectionMutation.mutate()}
+                disabled={startCorrectionMutation.isPending}
+                className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 disabled:opacity-60"
+              >
+                {startCorrectionMutation.isPending ? 'Iniciando corrección...' : 'Iniciar corrección'}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {isEditMode && currentSectionObservations.length > 0 && (
+        <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+          <p className="mb-3 font-medium">Observaciones abiertas de esta sección</p>
+          <div className="space-y-3">
+            {currentSectionObservations.map((observation) => (
+              <div key={observation.id} className="rounded-md border border-rose-200 bg-white p-3">
+                <p>{observation.message}</p>
+                <p className="mt-1 text-xs text-rose-700">
+                  {observation.creatorRole} — {new Date(observation.createdAt).toLocaleString()}
+                </p>
+                {canResolveObservations && (
+                  <button
+                    type="button"
+                    onClick={() => resolveObservationMutation.mutate(observation.id)}
+                    disabled={resolveObservationMutation.isPending}
+                    className="mt-3 rounded-md border border-emerald-200 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+                  >
+                    {resolveObservationMutation.isPending ? 'Cerrando...' : 'Marcar como corregida'}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <WizardLayout
         currentStep={currentStep}
         totalSteps={totalSteps}
+        onStepSelect={handleStepSelect}
         onNext={handleNext}
         onPrev={prevStep}
         onSaveDraft={handleSaveDraft}
         isFirstStep={isFirstStep}
         isLastStep={isLastStep}
-        errors={stepErrors}
+        stepErrors={stepErrors}
         isSaving={saveMutation.isPending}
-        apiError={null}
       >
         {renderStep()}
       </WizardLayout>

@@ -38,11 +38,11 @@ describe('ReportsController', () => {
       const buffer = Buffer.from('excel');
       mockReportsService.generateRatMasterExcel.mockResolvedValue(buffer);
       const res = mockResponse();
-      const user = { role: 'SUPER_ADMIN', companyId: 'c1' };
+      const user = { roleCode: 'SUPER_ADMIN', companyId: 'c1', userId: 'u1' };
 
       await controller.downloadRatMasterExcel('c2', user, res);
 
-      expect(service.generateRatMasterExcel).toHaveBeenCalledWith('c2');
+      expect(service.generateRatMasterExcel).toHaveBeenCalledWith(user, 'c2');
       expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       expect(res.setHeader).toHaveBeenCalledWith('Content-Disposition', 'attachment; filename="RAT_Maestro.xlsx"');
       expect(res.send).toHaveBeenCalledWith(buffer);
@@ -52,11 +52,11 @@ describe('ReportsController', () => {
       const buffer = Buffer.from('excel');
       mockReportsService.generateRatMasterExcel.mockResolvedValue(buffer);
       const res = mockResponse();
-      const user = { role: 'DPO', companyId: 'c1' };
+      const user = { roleCode: 'DPO', companyId: 'c1', userId: 'u1' };
 
       await controller.downloadRatMasterExcel('c2', user, res);
 
-      expect(service.generateRatMasterExcel).toHaveBeenCalledWith('c1');
+      expect(service.generateRatMasterExcel).toHaveBeenCalledWith(user, 'c2');
       expect(res.send).toHaveBeenCalledWith(buffer);
     });
   });
@@ -66,11 +66,11 @@ describe('ReportsController', () => {
       const buffer = Buffer.from('pdf');
       mockReportsService.generateRatMasterPdf.mockResolvedValue(buffer);
       const res = mockResponse();
-      const user = { role: 'SUPER_ADMIN', companyId: 'c1' };
+      const user = { roleCode: 'SUPER_ADMIN', companyId: 'c1', userId: 'u1' };
 
       await controller.downloadRatMasterPdf('c2', user, res);
 
-      expect(service.generateRatMasterPdf).toHaveBeenCalledWith('c2');
+      expect(service.generateRatMasterPdf).toHaveBeenCalledWith(user, 'c2');
       expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'application/pdf');
       expect(res.setHeader).toHaveBeenCalledWith('Content-Disposition', 'attachment; filename="RAT_Maestro.pdf"');
       expect(res.send).toHaveBeenCalledWith(buffer);
@@ -80,11 +80,11 @@ describe('ReportsController', () => {
       const buffer = Buffer.from('pdf');
       mockReportsService.generateRatMasterPdf.mockResolvedValue(buffer);
       const res = mockResponse();
-      const user = { role: 'PROCESS_LEADER', companyId: 'c1' };
+      const user = { roleCode: 'DPO', companyId: 'c1', userId: 'u1' };
 
       await controller.downloadRatMasterPdf('c2', user, res);
 
-      expect(service.generateRatMasterPdf).toHaveBeenCalledWith('c1');
+      expect(service.generateRatMasterPdf).toHaveBeenCalledWith(user, 'c2');
       expect(res.send).toHaveBeenCalledWith(buffer);
     });
   });

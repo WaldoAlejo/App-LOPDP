@@ -14,11 +14,11 @@ const VALID_STATUSES = [
 const STATUS_FLOW: Record<string, string[]> = {
   borrador: ['en_edicion', 'enviado'],
   en_edicion: ['borrador', 'enviado'],
-  enviado: ['en_revision_dpo', 'observado'],
-  en_revision_dpo: ['observado', 'validado', 'requiere_eipd'],
+  enviado: ['en_revision_dpo', 'observado', 'aprobado', 'requiere_eipd'],
+  en_revision_dpo: ['observado', 'validado', 'aprobado', 'requiere_eipd'],
   observado: ['en_correccion'],
   en_correccion: ['subsanado'],
-  subsanado: ['en_revision_dpo', 'observado'],
+  subsanado: ['en_revision_dpo', 'observado', 'en_correccion', 'aprobado', 'requiere_eipd'],
   validado: ['aprobado', 'observado'],
   aprobado: ['archivado'],
   requiere_eipd: ['en_revision_dpo', 'aprobado'],
@@ -26,9 +26,171 @@ const STATUS_FLOW: Record<string, string[]> = {
   reemplazado: [],
 };
 
+const COMPANY_WIDE_TREATMENT_ROLES = new Set(['DPO', 'SECURITY_LEAD', 'AUDITOR']);
+const REVIEW_AUTHORITY_ROLES = new Set(['SUPER_ADMIN', 'DPO']);
+const OPERATIONAL_TREATMENT_ROLES = new Set(['SUPER_ADMIN', 'COMPANY_ADMIN', 'PROCESS_LEADER', 'SUPPORT']);
+
 @Injectable()
 export class TreatmentsService {
   constructor(private prisma: PrismaService, private audit: AuditService) {}
+
+  private normalizeCodeToken(value: string) {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .toUpperCase();
+  }
+
+  private buildCodeSegment(value: string) {
+    return this.normalizeCodeToken(value).slice(0, 4).padEnd(4, 'X');
+  }
+
+  private extractCodeSequence(code: string, prefix: string) {
+    const match = code.match(new RegExp(`^${prefix}-(\\d+)$`));
+    if (!match) {
+      return 0;
+    }
+
+    return Number.parseInt(match[1], 10) || 0;
+  }
+
+  private async resolveCodeContext(companyId: string, areaId: string, processId: string) {
+    const [area, process] = await Promise.all([
+      this.prisma.area.findUnique({
+        where: { id: areaId },
+        select: { id: true, companyId: true, name: true },
+      }),
+      this.prisma.process.findUnique({
+        where: { id: processId },
+        select: { id: true, companyId: true, areaId: true, name: true },
+      }),
+    ]);
+
+    if (!area || area.companyId !== companyId) {
+      throw new BadRequestException('El área seleccionada no es válida para la empresa del tratamiento');
+    }
+
+    if (!process || process.companyId !== companyId || process.areaId !== areaId) {
+      throw new BadRequestException('El proceso seleccionado no es válido para el área indicada');
+    }
+
+    const areaSegment = this.buildCodeSegment(area.name);
+    const processSegment = this.buildCodeSegment(process.name);
+    const prefix = `RAT-${areaSegment}-${processSegment}`;
+
+    return { areaSegment, processSegment, prefix };
+  }
+
+  private async generateTreatmentCode(
+    companyId: string,
+    areaId: string,
+    processId: string,
+    currentTreatment?: { id: string; areaId: string; processId: string; code: string },
+  ) {
+    const context = await this.resolveCodeContext(companyId, areaId, processId);
+
+    if (
+      currentTreatment
+      && currentTreatment.areaId === areaId
+      && currentTreatment.processId === processId
+      && currentTreatment.code.startsWith(`${context.prefix}-`)
+    ) {
+      return {
+        code: currentTreatment.code,
+        areaSegment: context.areaSegment,
+        processSegment: context.processSegment,
+        sequence: this.extractCodeSequence(currentTreatment.code, context.prefix),
+      };
+    }
+
+    const treatmentsWithPrefix = await this.prisma.treatment.findMany({
+      where: {
+        companyId,
+        code: { startsWith: `${context.prefix}-` },
+        ...(currentTreatment ? { NOT: { id: currentTreatment.id } } : {}),
+      },
+      select: { code: true },
+    });
+
+    const nextSequence = treatmentsWithPrefix.reduce((maxSequence, treatment) => {
+      return Math.max(maxSequence, this.extractCodeSequence(treatment.code, context.prefix));
+    }, 0) + 1;
+
+    return {
+      code: `${context.prefix}-${String(nextSequence).padStart(3, '0')}`,
+      areaSegment: context.areaSegment,
+      processSegment: context.processSegment,
+      sequence: nextSequence,
+    };
+  }
+
+  private buildAccessWhere(currentUser: any) {
+    if (currentUser.roleCode === 'SUPER_ADMIN') {
+      return {};
+    }
+
+    if (COMPANY_WIDE_TREATMENT_ROLES.has(currentUser.roleCode)) {
+      return { companyId: currentUser.companyId };
+    }
+
+    return {
+      companyId: currentUser.companyId,
+      OR: [
+        { createdByUserId: currentUser.userId },
+        { treatmentResponsibleUserId: currentUser.userId },
+        { process: { responsibleUserId: currentUser.userId } },
+      ],
+    };
+  }
+
+  private assertAccessToTreatment(treatment: any, currentUser: any) {
+    if (currentUser.roleCode === 'SUPER_ADMIN') {
+      return;
+    }
+
+    if (treatment.companyId !== currentUser.companyId) {
+      throw new ForbiddenException('No tienes permiso para ver este tratamiento');
+    }
+
+    if (COMPANY_WIDE_TREATMENT_ROLES.has(currentUser.roleCode)) {
+      return;
+    }
+
+    const hasScopedAccess = treatment.createdByUserId === currentUser.userId
+      || treatment.treatmentResponsibleUserId === currentUser.userId
+      || treatment.process?.responsibleUserId === currentUser.userId;
+
+    if (!hasScopedAccess) {
+      throw new ForbiddenException('No tienes permiso para ver este tratamiento');
+    }
+  }
+
+  private assertStatusChangePermission(treatment: any, newStatus: string, currentUser: any) {
+    if (currentUser.roleCode === 'SUPER_ADMIN') {
+      return;
+    }
+
+    const reviewStatuses = new Set(['en_revision_dpo', 'observado', 'validado', 'aprobado', 'requiere_eipd']);
+
+    if (reviewStatuses.has(newStatus)) {
+      if (!REVIEW_AUTHORITY_ROLES.has(currentUser.roleCode)) {
+        throw new ForbiddenException('Solo el DPO puede ejecutar acciones de revisión sobre el tratamiento');
+      }
+      return;
+    }
+
+    if (newStatus === 'en_correccion' && treatment.currentStatus === 'subsanado') {
+      if (!REVIEW_AUTHORITY_ROLES.has(currentUser.roleCode)) {
+        throw new ForbiddenException('Solo el DPO puede devolver una subsanación a corrección');
+      }
+      return;
+    }
+
+    if (!OPERATIONAL_TREATMENT_ROLES.has(currentUser.roleCode) && !REVIEW_AUTHORITY_ROLES.has(currentUser.roleCode)) {
+      throw new ForbiddenException('Tu rol no puede cambiar el estado de este tratamiento');
+    }
+  }
 
   private assertAutomatedProcessingCompleteness(data: {
     profiling?: boolean | null;
@@ -144,11 +306,9 @@ export class TreatmentsService {
   }
 
   async findAll(currentUser: any, query: { companyId?: string; areaId?: string; status?: string; search?: string }) {
-    const where: any = {};
+    const where: any = this.buildAccessWhere(currentUser);
 
-    if (currentUser.roleCode !== 'SUPER_ADMIN') {
-      where.companyId = currentUser.companyId;
-    } else if (query.companyId) {
+    if (currentUser.roleCode === 'SUPER_ADMIN' && query.companyId) {
       where.companyId = query.companyId;
     }
 
@@ -183,6 +343,13 @@ export class TreatmentsService {
       where: { id },
       include: {
         company: true,
+        process: {
+          select: {
+            id: true,
+            name: true,
+            responsibleUserId: true,
+          },
+        },
         dataSubjects: true,
         treatmentDataItems: true,
         treatmentLegalBases: true,
@@ -198,10 +365,48 @@ export class TreatmentsService {
       },
     });
     if (!treatment) throw new NotFoundException('Tratamiento no encontrado');
-    if (currentUser.roleCode !== 'SUPER_ADMIN' && treatment.companyId !== currentUser.companyId) {
-      throw new ForbiddenException('No tienes permiso para ver este tratamiento');
-    }
+    this.assertAccessToTreatment(treatment, currentUser);
     return treatment;
+  }
+
+  async getCodePreview(currentUser: any, params: { areaId?: string; processId?: string; treatmentId?: string }) {
+    if (!params.areaId || !params.processId) {
+      throw new BadRequestException('Debe seleccionar área y proceso para generar el código RAT');
+    }
+
+    let companyId = currentUser.companyId;
+    let currentTreatment: { id: string; areaId: string; processId: string; code: string } | undefined;
+
+    if (params.treatmentId) {
+      const treatment = await this.prisma.treatment.findUnique({
+        where: { id: params.treatmentId },
+        select: {
+          id: true,
+          companyId: true,
+          areaId: true,
+          processId: true,
+          code: true,
+          createdByUserId: true,
+          treatmentResponsibleUserId: true,
+          process: { select: { responsibleUserId: true } },
+        },
+      });
+
+      if (!treatment) {
+        throw new NotFoundException('Tratamiento no encontrado');
+      }
+
+      this.assertAccessToTreatment(treatment, currentUser);
+      companyId = treatment.companyId;
+      currentTreatment = {
+        id: treatment.id,
+        areaId: treatment.areaId,
+        processId: treatment.processId,
+        code: treatment.code,
+      };
+    }
+
+    return this.generateTreatmentCode(companyId, params.areaId, params.processId, currentTreatment);
   }
 
   async create(dto: CreateTreatmentDto, currentUser: any) {
@@ -209,7 +414,10 @@ export class TreatmentsService {
       dto.companyId = currentUser.companyId;
     }
 
+    const generatedCode = await this.generateTreatmentCode(dto.companyId, dto.areaId, dto.processId);
+
     const {
+      code: _ignoredCode,
       dataSubjects = [],
       dataItems = [],
       legalBases = [],
@@ -236,6 +444,7 @@ export class TreatmentsService {
     const treatment = await this.prisma.treatment.create({
       data: {
         ...treatmentData,
+        code: generatedCode.code,
         createdByUserId: currentUser.userId,
         currentStatus: 'borrador',
         dataSubjects: dataSubjects.length
@@ -388,7 +597,7 @@ export class TreatmentsService {
       action: 'TREATMENT_CREATED',
       entityName: 'Treatment',
       entityId: treatment.id,
-      newValuesJson: JSON.stringify(dto),
+      newValuesJson: JSON.stringify({ ...dto, code: generatedCode.code }),
     });
 
     return treatment;
@@ -434,10 +643,24 @@ export class TreatmentsService {
       aiSystemDescription: treatmentData.aiSystemDescription ?? treatment.aiSystemDescription,
     });
 
+    const nextCompanyId = currentUser.roleCode === 'SUPER_ADMIN'
+      ? (dto.companyId ?? treatment.companyId)
+      : currentUser.companyId;
+    const nextAreaId = dto.areaId ?? treatment.areaId;
+    const nextProcessId = dto.processId ?? treatment.processId;
+    const generatedCode = await this.generateTreatmentCode(nextCompanyId, nextAreaId, nextProcessId, {
+      id: treatment.id,
+      areaId: treatment.areaId,
+      processId: treatment.processId,
+      code: treatment.code,
+    });
+
     const updated = await this.prisma.treatment.update({
       where: { id },
       data: {
         ...treatmentData,
+        companyId: nextCompanyId,
+        code: generatedCode.code,
         dataSubjects:
           dataSubjects !== undefined
             ? {
@@ -655,7 +878,7 @@ export class TreatmentsService {
       entityName: 'Treatment',
       entityId: id,
       oldValuesJson: JSON.stringify(treatment),
-      newValuesJson: JSON.stringify(dto),
+      newValuesJson: JSON.stringify({ ...dto, code: generatedCode.code, companyId: nextCompanyId }),
     });
 
     return updated;
@@ -669,12 +892,14 @@ export class TreatmentsService {
       throw new BadRequestException('Estado no válido');
     }
 
+    this.assertStatusChangePermission(treatment, newStatus, currentUser);
+
     const allowedTransitions = STATUS_FLOW[treatment.currentStatus] || [];
     if (!allowedTransitions.includes(newStatus) && currentUser.roleCode !== 'SUPER_ADMIN') {
       throw new BadRequestException(`No se puede cambiar de ${treatment.currentStatus} a ${newStatus}`);
     }
 
-    const openObservations = ['observado', 'subsanado', 'validado', 'aprobado'].includes(newStatus)
+    const openObservations = ['observado', 'en_correccion', 'subsanado', 'validado', 'aprobado'].includes(newStatus)
       ? await this.prisma.observation.count({ where: { treatmentId: id, status: 'abierta' } })
       : 0;
 
@@ -694,6 +919,10 @@ export class TreatmentsService {
       }
     }
 
+    if (newStatus === 'en_correccion' && ['observado', 'subsanado'].includes(treatment.currentStatus) && openObservations === 0) {
+      throw new BadRequestException('No se puede devolver a corrección sin observaciones abiertas');
+    }
+
     if (['validado', 'aprobado'].includes(newStatus) && openObservations > 0) {
       throw new BadRequestException(`No se puede pasar a ${newStatus} con observaciones abiertas`);
     }
@@ -708,7 +937,7 @@ export class TreatmentsService {
         currentStatus: newStatus,
         submissionDate: newStatus === 'enviado' ? new Date() : treatment.submissionDate,
         approvalDate: newStatus === 'aprobado' ? new Date() : treatment.approvalDate,
-        reviewedByUserId: ['en_revision_dpo', 'validado', 'aprobado', 'observado'].includes(newStatus)
+        reviewedByUserId: ['en_revision_dpo', 'validado', 'aprobado', 'observado', 'en_correccion', 'requiere_eipd'].includes(newStatus)
           ? currentUser.userId
           : treatment.reviewedByUserId,
       },

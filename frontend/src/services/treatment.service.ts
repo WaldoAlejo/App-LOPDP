@@ -98,7 +98,7 @@ export interface CreateTreatmentDto {
   companyId: string;
   areaId: string;
   processId: string;
-  code: string;
+  code?: string;
   name: string;
   shortDescription?: string;
   mainPurpose: string;
@@ -219,9 +219,18 @@ export interface CreateTreatmentDto {
   };
 }
 
+export interface TreatmentCodePreview {
+  code: string;
+  areaSegment: string;
+  processSegment: string;
+  sequence: number;
+}
+
 export const treatmentService = {
   getAll: (params?: { companyId?: string; areaId?: string; status?: string; search?: string }) =>
     api.get<Treatment[]>('/treatments', { params }).then(r => r.data),
+  getCodePreview: (params: { areaId: string; processId: string; treatmentId?: string }) =>
+    api.get<TreatmentCodePreview>('/treatments/code-preview', { params }).then(r => r.data),
   getOne: (id: string) => api.get<Treatment>(`/treatments/${id}`).then(r => r.data),
   create: (dto: CreateTreatmentDto) => api.post<Treatment>('/treatments', dto).then(r => r.data),
   update: (id: string, dto: Partial<CreateTreatmentDto>) => api.patch<Treatment>(`/treatments/${id}`, dto).then(r => r.data),

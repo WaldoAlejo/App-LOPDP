@@ -12,37 +12,34 @@ export class ReportsController {
   constructor(private reportsService: ReportsService) {}
 
   @Get('rat-master/excel')
-  @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO', 'LEGAL_REVIEWER', 'PROCESS_LEADER')
+  @Roles('SUPER_ADMIN', 'DPO', 'SECURITY_LEAD', 'AUDITOR')
   async downloadRatMasterExcel(
     @Query('companyId') companyId: string,
     @CurrentUser() currentUser: any,
     @Res() res: Response,
   ) {
-    const effectiveCompanyId = currentUser.role === 'SUPER_ADMIN' ? companyId : currentUser.companyId;
-    const buffer = await this.reportsService.generateRatMasterExcel(effectiveCompanyId);
+    const buffer = await this.reportsService.generateRatMasterExcel(currentUser, companyId);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename="RAT_Maestro.xlsx"');
     res.send(buffer);
   }
 
   @Get('rat-master/pdf')
-  @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO', 'LEGAL_REVIEWER', 'PROCESS_LEADER')
+  @Roles('SUPER_ADMIN', 'DPO', 'SECURITY_LEAD', 'AUDITOR')
   async downloadRatMasterPdf(
     @Query('companyId') companyId: string,
     @CurrentUser() currentUser: any,
     @Res() res: Response,
   ) {
-    const effectiveCompanyId = currentUser.role === 'SUPER_ADMIN' ? companyId : currentUser.companyId;
-    const buffer = await this.reportsService.generateRatMasterPdf(effectiveCompanyId);
+    const buffer = await this.reportsService.generateRatMasterPdf(currentUser, companyId);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename="RAT_Maestro.pdf"');
     res.send(buffer);
   }
 
   @Get('kpis')
-  @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO', 'LEGAL_REVIEWER', 'PROCESS_LEADER', 'AUDITOR')
+  @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO', 'LEGAL_REVIEWER', 'PROCESS_LEADER', 'AUDITOR', 'SECURITY_LEAD', 'SUPPORT')
   async getKpis(@Query('companyId') companyId: string, @CurrentUser() currentUser: any) {
-    const effectiveCompanyId = currentUser.role === 'SUPER_ADMIN' ? companyId : currentUser.companyId;
-    return this.reportsService.getKpis(effectiveCompanyId);
+    return this.reportsService.getKpis(currentUser, companyId);
   }
 }

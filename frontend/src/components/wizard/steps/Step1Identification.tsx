@@ -23,10 +23,12 @@ interface Props {
     jointControllerContact?: string;
   };
   onChange: (values: Partial<Props['values']>) => void;
+  generatedCode?: string;
+  isGeneratingCode?: boolean;
   errors?: string[];
 }
 
-export function Step1Identification({ values, onChange, errors = [] }: Props) {
+export function Step1Identification({ values, onChange, generatedCode, isGeneratingCode = false, errors = [] }: Props) {
   const user = useAuthStore((s) => s.user);
   const { data: companies } = useQuery({
     queryKey: ['companies'],
@@ -51,9 +53,12 @@ export function Step1Identification({ values, onChange, errors = [] }: Props) {
   const filteredCompanies = user?.roleCode === 'SUPER_ADMIN'
     ? companies
     : companies?.filter((c) => c.id === user?.companyId);
+  const dpoUsers = users?.filter((u) => u.role?.code === 'DPO') || [];
 
   const selectedCompany = companies?.find((c) => c.id === values.companyId);
   const hasError = (field: string) => errors.some((e) => e.toLowerCase().includes(field.toLowerCase()));
+  const lockAreaSelection = user?.roleCode === 'PROCESS_LEADER' && !!values.areaId;
+  const lockProcessSelection = user?.roleCode === 'PROCESS_LEADER' && !!values.processId;
 
   return (
     <div className="space-y-4">
@@ -67,7 +72,17 @@ export function Step1Identification({ values, onChange, errors = [] }: Props) {
           <label className="mb-1 block text-sm font-medium text-gray-700">Empresa responsable *</label>
           <select
             value={values.companyId}
-            onChange={(e) => onChange({ companyId: e.target.value, areaId: '', processId: '' })}
+            onChange={(e) => onChange({
+              companyId: e.target.value,
+              areaId: '',
+              processId: '',
+              treatmentResponsibleUserId: undefined,
+              dpoId: undefined,
+              dpoName: undefined,
+              dpoContactEmail: undefined,
+              dpoContactPhone: undefined,
+            })}
+            disabled={user?.roleCode !== 'SUPER_ADMIN'}
             className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${hasError('empresa') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'}`}
           >
             <option value="">Seleccione...</option>
@@ -82,7 +97,7 @@ export function Step1Identification({ values, onChange, errors = [] }: Props) {
           <select
             value={values.areaId}
             onChange={(e) => onChange({ areaId: e.target.value, processId: '' })}
-            disabled={!values.companyId}
+            disabled={!values.companyId || lockAreaSelection}
             className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-1 disabled:bg-gray-100 ${hasError('área') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'}`}
           >
             <option value="">Seleccione...</option>
@@ -97,7 +112,7 @@ export function Step1Identification({ values, onChange, errors = [] }: Props) {
           <select
             value={values.processId}
             onChange={(e) => onChange({ processId: e.target.value })}
-            disabled={!values.areaId}
+            disabled={!values.areaId || lockProcessSelection}
             className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-1 disabled:bg-gray-100 ${hasError('proceso') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'}`}
           >
             <option value="">Seleccione...</option>
@@ -109,13 +124,10 @@ export function Step1Identification({ values, onChange, errors = [] }: Props) {
 
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Código RAT *</label>
-          <input
-            type="text"
-            value={values.code}
-            onChange={(e) => onChange({ code: e.target.value })}
-            placeholder="Ej: RAT-001"
-            className={`w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-1 ${hasError('código') ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'}`}
-          />
+          <div className={`rounded-md border px-3 py-2 text-sm ${hasError('código') ? 'border-red-500' : 'border-gray-300'} bg-gray-50 text-gray-800`}>
+            {isGeneratingCode ? 'Generando código...' : (generatedCode || values.code || 'Seleccione área y proceso para generar el código')}
+          </div>
+          <p className="mt-1 text-xs text-gray-500">Formato automático: RAT-AREA-PROC-001 usando 4 letras del área y 4 del proceso.</p>
         </div>
       </div>
 
@@ -177,7 +189,7 @@ export function Step1Identification({ values, onChange, errors = [] }: Props) {
             value={values.dpoId || ''}
             onChange={(e) => {
               const dpoId = e.target.value || undefined;
-              const dpoUser = users?.find((u) => u.id === dpoId);
+              const dpoUser = dpoUsers.find((u) => u.id === dpoId);
               onChange({
                 dpoId,
                 dpoName: dpoUser ? `${dpoUser.firstName} ${dpoUser.lastName}` : undefined,
@@ -189,7 +201,7 @@ export function Step1Identification({ values, onChange, errors = [] }: Props) {
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:bg-gray-100"
           >
             <option value="">Seleccione...</option>
-            {users?.map((u) => (
+            {dpoUsers.map((u) => (
               <option key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.email})</option>
             ))}
           </select>

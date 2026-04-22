@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "description": "App LOPDP - Registro de Actividades de Tratamiento",
   "scripts": {
-    "build:backend": "cd backend && npm run build",
+    "build:backend": "cd backend && npx prisma generate --schema=prisma/schema.prisma && npm run build",
     "build:frontend": "cd frontend && npm run build",
-    "build": "npm run build:backend && npm run build:frontend",
-    "build:deploy": "npm run build:backend && npm run build:frontend && echo 'Build completo. Reinicia PM2 y copia dist al servidor.'"
+    "build": "npm run build:backend && npm run build:frontend && npm run deploy:static",
+    "deploy:static": "node scripts/deploy-static.js",
+    "deploy:full": "npm run build && pm2 restart all && pm2 save"
   },
   "private": true
 }

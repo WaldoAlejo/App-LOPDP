@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { MainLayout } from '../layouts/MainLayout';
 import { LoginPage } from '../pages/LoginPage';
-import { ChangePasswordPage } from '../pages/ChangePasswordPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { UsersPage } from '../pages/UsersPage';
 import { CompaniesPage } from '../pages/CompaniesPage';
@@ -20,9 +19,7 @@ import { canAccessAudits, canAccessManagement, canAccessReports, canAccessReview
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const user = useAuthStore((s) => s.user);
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (user?.forcePasswordChange) return <Navigate to="/change-password" replace />;
   return <>{children}</>;
 }
 
@@ -47,14 +44,7 @@ export function AppRoutes() {
           </PublicRoute>
         }
       />
-      <Route
-        path="/change-password"
-        element={
-          <ProtectedRoute>
-            <ChangePasswordPage />
-          </ProtectedRoute>
-        }
-      />
+
       <Route
         path="/"
         element={

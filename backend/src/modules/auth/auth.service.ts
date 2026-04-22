@@ -9,6 +9,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -58,6 +59,7 @@ export class AuthService {
         lastName: user.lastName,
         roleCode: user.role.code,
         companyId: user.companyId,
+        forcePasswordChange: user.forcePasswordChange,
       },
       tokens,
     };
@@ -131,7 +133,7 @@ export class AuthService {
       const passwordHash = await bcrypt.hash(dto.newPassword, 10);
       await this.prisma.user.update({
         where: { id: payload.sub },
-        data: { passwordHash },
+        data: { passwordHash, forcePasswordChange: false },
       });
       await this.prisma.refreshToken.deleteMany({ where: { userId: payload.sub } });
       await this.audit.log({
@@ -144,6 +146,40 @@ export class AuthService {
     } catch {
       throw new BadRequestException('Token inválido o expirado');
     }
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
+
+    const isMatch = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!isMatch) {
+      throw new UnauthorizedException('Contraseña actual incorrecta');
+    }
+
+    const isSamePassword = await bcrypt.compare(dto.newPassword, user.passwordHash);
+    if (isSamePassword) {
+      throw new BadRequestException('La nueva contraseña no puede ser igual a la anterior');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash, forcePasswordChange: false },
+    });
+
+    await this.prisma.refreshToken.deleteMany({ where: { userId } });
+
+    await this.audit.log({
+      userId,
+      action: 'CHANGE_PASSWORD',
+      entityName: 'User',
+      entityId: userId,
+    });
+
+    return { message: 'Contraseña actualizada correctamente' };
   }
 
   private async generateTokens(userId: string, email: string, roleCode: string) {

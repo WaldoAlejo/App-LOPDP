@@ -8,6 +8,7 @@ export interface User {
   lastName: string;
   roleCode: string;
   companyId?: string;
+  forcePasswordChange?: boolean;
 }
 
 interface Tokens {
@@ -20,6 +21,7 @@ interface AuthState {
   tokens: Tokens | null;
   isAuthenticated: boolean;
   setAuth: (user: User, tokens: Tokens) => void;
+  setUser: (user: User) => void;
   setTokens: (tokens: Tokens) => void;
   logout: () => void;
 }
@@ -35,6 +37,7 @@ export const useAuthStore = create<AuthState>()(
         localStorage.setItem('refresh_token', tokens.refreshToken);
         set({ user, tokens, isAuthenticated: true });
       },
+      setUser: (user) => set({ user }),
       setTokens: (tokens) => {
         localStorage.setItem('access_token', tokens.accessToken);
         localStorage.setItem('refresh_token', tokens.refreshToken);

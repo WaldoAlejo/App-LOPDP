@@ -1,0 +1,12 @@
+{
+  "name": "app-lopdp",
+  "version": "1.0.0",
+  "description": "App LOPDP - Registro de Actividades de Tratamiento",
+  "scripts": {
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:deploy": "npm run build:backend && npm run build:frontend && echo 'Build completo. Reinicia PM2 y copia dist al servidor.'"
+  },
+  "private": true
+}

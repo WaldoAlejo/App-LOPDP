@@ -23,7 +23,7 @@ export class ObservationsController {
   }
 
   @Patch(':id/resolve')
-  @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'PROCESS_LEADER', 'SUPPORT')
+  @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'PROCESS_LEADER', 'SUPPORT', 'AUDITOR', 'SECURITY_LEAD')
   resolve(@Param('id') id: string, @CurrentUser() currentUser: any) {
     return this.observationsService.resolve(id, currentUser);
   }

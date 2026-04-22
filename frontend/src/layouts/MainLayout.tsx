@@ -3,6 +3,7 @@ import { Sidebar } from '../components/layout/Sidebar';
 import { Topbar } from '../components/layout/Topbar';
 import { ToastContainer } from '../components/ui/Toast';
 import { ChangePasswordModal } from '../components/ChangePasswordModal';
+import { AiChatPanel } from '../components/AiChatPanel';
 import { useAuthStore } from '../store/authStore';
 
 export function MainLayout() {
@@ -12,6 +13,7 @@ export function MainLayout() {
     <div className="flex h-screen bg-gray-50">
       <ToastContainer />
       <ChangePasswordModal isOpen={!!user?.forcePasswordChange} onClose={() => {}} />
+      <AiChatPanel />
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Topbar />

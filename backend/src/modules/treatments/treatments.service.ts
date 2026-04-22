@@ -28,7 +28,7 @@ const STATUS_FLOW: Record<string, string[]> = {
 
 const COMPANY_WIDE_TREATMENT_ROLES = new Set(['DPO', 'SECURITY_LEAD', 'AUDITOR']);
 const REVIEW_AUTHORITY_ROLES = new Set(['SUPER_ADMIN', 'DPO']);
-const OPERATIONAL_TREATMENT_ROLES = new Set(['SUPER_ADMIN', 'COMPANY_ADMIN', 'PROCESS_LEADER', 'SUPPORT']);
+const OPERATIONAL_TREATMENT_ROLES = new Set(['SUPER_ADMIN', 'COMPANY_ADMIN', 'PROCESS_LEADER', 'SUPPORT', 'AUDITOR']);
 
 @Injectable()
 export class TreatmentsService {

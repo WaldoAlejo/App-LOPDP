@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { companyService } from '../../../services/company.service';
 import { areaService } from '../../../services/area.service';
@@ -30,6 +31,13 @@ interface Props {
 
 export function Step1Identification({ values, onChange, generatedCode, isGeneratingCode = false, errors = [] }: Props) {
   const user = useAuthStore((s) => s.user);
+
+  // Auto-save generated code to form
+  useEffect(() => {
+    if (generatedCode && generatedCode !== values.code) {
+      onChange({ code: generatedCode });
+    }
+  }, [generatedCode, values.code, onChange]);
   const { data: companies } = useQuery({
     queryKey: ['companies'],
     queryFn: () => companyService.getAll(),
@@ -208,16 +216,15 @@ export function Step1Identification({ values, onChange, generatedCode, isGenerat
         </div>
       </div>
 
-      {/* Datos de contacto del DPO (manual o autocompletado) */}
+      {/* Datos de contacto del DPO (solo lectura, se autocompleta del usuario DPO) */}
       <div className="grid gap-4 md:grid-cols-3">
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700">Nombre del DPO</label>
           <input
             type="text"
             value={values.dpoName || ''}
-            onChange={(e) => onChange({ dpoName: e.target.value })}
-            placeholder="Nombre completo del DPO"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            readOnly
+            className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 cursor-not-allowed"
           />
         </div>
         <div>
@@ -225,9 +232,8 @@ export function Step1Identification({ values, onChange, generatedCode, isGenerat
           <input
             type="email"
             value={values.dpoContactEmail || ''}
-            onChange={(e) => onChange({ dpoContactEmail: e.target.value })}
-            placeholder="dpo@empresa.com"
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            readOnly
+            className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 cursor-not-allowed"
           />
         </div>
         <div>
@@ -235,9 +241,8 @@ export function Step1Identification({ values, onChange, generatedCode, isGenerat
           <input
             type="text"
             value={values.dpoContactPhone || ''}
-            onChange={(e) => onChange({ dpoContactPhone: e.target.value })}
-            placeholder="+593..."
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            readOnly
+            className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600 cursor-not-allowed"
           />
         </div>
       </div>

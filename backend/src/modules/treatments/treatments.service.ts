@@ -184,7 +184,8 @@ export class TreatmentsService {
       return;
     }
 
-    const reviewStatuses = new Set(['en_revision_dpo', 'observado', 'validado', 'aprobado', 'requiere_eipd']);
+    // Estados de revisión DPO: solo SUPER_ADMIN y DPO pueden asignar estos estados
+    const reviewStatuses = new Set(['en_revision_dpo', 'validado', 'aprobado', 'requiere_eipd']);
 
     if (reviewStatuses.has(newStatus)) {
       if (!REVIEW_AUTHORITY_ROLES.has(currentUser.roleCode)) {
@@ -193,6 +194,23 @@ export class TreatmentsService {
       return;
     }
 
+    // El DPO puede marcar como 'observado' cuando encuentra problemas
+    if (newStatus === 'observado') {
+      if (!REVIEW_AUTHORITY_ROLES.has(currentUser.roleCode)) {
+        throw new ForbiddenException('Solo el DPO puede marcar un tratamiento como observado');
+      }
+      return;
+    }
+
+    // El responsable del tratamiento puede iniciar la corrección desde 'observado'
+    if (newStatus === 'en_correccion' && treatment.currentStatus === 'observado') {
+      if (!OPERATIONAL_TREATMENT_ROLES.has(currentUser.roleCode) && !REVIEW_AUTHORITY_ROLES.has(currentUser.roleCode)) {
+        throw new ForbiddenException('Tu rol no puede iniciar la corrección de este tratamiento');
+      }
+      return;
+    }
+
+    // Solo el DPO puede devolver una subsanación a corrección
     if (newStatus === 'en_correccion' && treatment.currentStatus === 'subsanado') {
       if (!REVIEW_AUTHORITY_ROLES.has(currentUser.roleCode)) {
         throw new ForbiddenException('Solo el DPO puede devolver una subsanación a corrección');

@@ -79,16 +79,28 @@ export class ObservationsService {
       throw new BadRequestException('Solo se pueden registrar observaciones durante la revisión DPO o la re-revisión de subsanaciones');
     }
 
-    return this.prisma.observation.create({
-      data: {
-        treatmentId: dto.treatmentId,
-        sectionCode: dto.sectionCode,
-        message: dto.message,
-        createdByUserId: currentUser.userId,
-        creatorRole: currentUser.roleCode,
-        status: 'abierta',
-      },
-    });
+    // Crear la observación y cambiar el estado del tratamiento a 'observado'
+    const [observation] = await this.prisma.$transaction([
+      this.prisma.observation.create({
+        data: {
+          treatmentId: dto.treatmentId,
+          sectionCode: dto.sectionCode,
+          message: dto.message,
+          createdByUserId: currentUser.userId,
+          creatorRole: currentUser.roleCode,
+          status: 'abierta',
+        },
+      }),
+      this.prisma.treatment.update({
+        where: { id: dto.treatmentId },
+        data: {
+          currentStatus: 'observado',
+          reviewedByUserId: currentUser.userId,
+        },
+      }),
+    ]);
+
+    return observation;
   }
 
   async resolve(id: string, currentUser: any) {

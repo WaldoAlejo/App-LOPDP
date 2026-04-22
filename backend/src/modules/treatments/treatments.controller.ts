@@ -45,13 +45,13 @@ export class TreatmentsController {
   }
 
   @Post()
-  @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO', 'PROCESS_LEADER', 'SUPPORT')
+  @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO', 'PROCESS_LEADER', 'SUPPORT', 'AUDITOR', 'SECURITY_LEAD')
   create(@Body() dto: CreateTreatmentDto, @CurrentUser() currentUser: any) {
     return this.treatmentsService.create(dto, currentUser);
   }
 
   @Patch(':id')
-  @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO', 'PROCESS_LEADER', 'SUPPORT')
+  @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO', 'PROCESS_LEADER', 'SUPPORT', 'AUDITOR', 'SECURITY_LEAD')
   update(@Param('id') id: string, @Body() dto: UpdateTreatmentDto, @CurrentUser() currentUser: any) {
     return this.treatmentsService.update(id, dto, currentUser);
   }

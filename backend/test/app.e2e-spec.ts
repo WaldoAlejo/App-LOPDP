@@ -42,6 +42,16 @@ describe('AppController (e2e)', () => {
       .post('/auth/login')
       .send({ email: 'lider@e2e.com', password: TEST_PASSWORD });
     authTokens['PROCESS_LEADER'] = loginLeader.body.tokens.accessToken;
+
+    const loginAuditor = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'auditor@e2e.com', password: TEST_PASSWORD });
+    authTokens['AUDITOR'] = loginAuditor.body.tokens.accessToken;
+
+    const loginSecurity = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'security@e2e.com', password: TEST_PASSWORD });
+    authTokens['SECURITY_LEAD'] = loginSecurity.body.tokens.accessToken;
   });
 
   afterAll(async () => {
@@ -211,6 +221,125 @@ describe('AppController (e2e)', () => {
     });
   });
 
+  describe('Permisos de Roles - AUDITOR y SECURITY_LEAD', () => {
+    it('AUDITOR debería poder crear un tratamiento', async () => {
+      const meRes = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', `Bearer ${authTokens['AUDITOR']}`)
+        .expect(200);
+
+      const user = meRes.body;
+      const areasRes = await request(app.getHttpServer())
+        .get(`/areas?companyId=${user.companyId}`)
+        .set('Authorization', `Bearer ${authTokens['AUDITOR']}`)
+        .expect(200);
+
+      const areaId = areasRes.body[0]?.id;
+      const processesRes = await request(app.getHttpServer())
+        .get(`/processes?areaId=${areaId}`)
+        .set('Authorization', `Bearer ${authTokens['AUDITOR']}`)
+        .expect(200);
+
+      const processId = processesRes.body[0]?.id;
+
+      const createRes = await request(app.getHttpServer())
+        .post('/treatments')
+        .set('Authorization', `Bearer ${authTokens['AUDITOR']}`)
+        .send({
+          companyId: user.companyId,
+          areaId,
+          processId,
+          name: 'Tratamiento Auditor E2E',
+          mainPurpose: 'Finalidad de prueba auditor',
+          captureSystem: 'Sistema web',
+          storageSystem: 'Base de datos',
+          medium: 'Digital',
+          technologies: 'React, NestJS',
+        });
+
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.code).toMatch(/^RAT-[A-Z]+-[A-Z]+-\d{3}$/);
+
+      // Guardar ID para siguiente test
+      authTokens['AUDITOR_TREATMENT_ID'] = createRes.body.id;
+    });
+
+    it('AUDITOR debería poder enviar tratamiento a revisión', async () => {
+      const treatmentId = authTokens['AUDITOR_TREATMENT_ID'];
+      expect(treatmentId).toBeDefined();
+
+      const statusRes = await request(app.getHttpServer())
+        .post(`/treatments/${treatmentId}/status`)
+        .set('Authorization', `Bearer ${authTokens['AUDITOR']}`)
+        .send({ status: 'enviado' });
+
+      if (statusRes.status !== 200) {
+        console.log('AUDITOR status error:', statusRes.status, statusRes.body);
+      }
+
+      expect(statusRes.status).toBe(200);
+      expect(statusRes.body.currentStatus).toBe('enviado');
+    });
+
+    it('SECURITY_LEAD debería poder crear un tratamiento', async () => {
+      const meRes = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', `Bearer ${authTokens['SECURITY_LEAD']}`)
+        .expect(200);
+
+      const user = meRes.body;
+      const areasRes = await request(app.getHttpServer())
+        .get(`/areas?companyId=${user.companyId}`)
+        .set('Authorization', `Bearer ${authTokens['SECURITY_LEAD']}`)
+        .expect(200);
+
+      const areaId = areasRes.body[0]?.id;
+      const processesRes = await request(app.getHttpServer())
+        .get(`/processes?areaId=${areaId}`)
+        .set('Authorization', `Bearer ${authTokens['SECURITY_LEAD']}`)
+        .expect(200);
+
+      const processId = processesRes.body[0]?.id;
+
+      const createRes = await request(app.getHttpServer())
+        .post('/treatments')
+        .set('Authorization', `Bearer ${authTokens['SECURITY_LEAD']}`)
+        .send({
+          companyId: user.companyId,
+          areaId,
+          processId,
+          name: 'Tratamiento Security E2E',
+          mainPurpose: 'Finalidad de prueba security',
+          captureSystem: 'Sistema web',
+          storageSystem: 'Base de datos',
+          medium: 'Digital',
+          technologies: 'React, NestJS',
+        });
+
+      expect(createRes.status).toBe(201);
+      expect(createRes.body.code).toMatch(/^RAT-[A-Z]+-[A-Z]+-\d{3}$/);
+
+      authTokens['SECURITY_TREATMENT_ID'] = createRes.body.id;
+    });
+
+    it('SECURITY_LEAD debería poder enviar tratamiento a revisión', async () => {
+      const treatmentId = authTokens['SECURITY_TREATMENT_ID'];
+      expect(treatmentId).toBeDefined();
+
+      const statusRes = await request(app.getHttpServer())
+        .post(`/treatments/${treatmentId}/status`)
+        .set('Authorization', `Bearer ${authTokens['SECURITY_LEAD']}`)
+        .send({ status: 'enviado' });
+
+      if (statusRes.status !== 200) {
+        console.log('SECURITY status error:', statusRes.status, statusRes.body);
+      }
+
+      expect(statusRes.status).toBe(200);
+      expect(statusRes.body.currentStatus).toBe('enviado');
+    });
+  });
+
   describe('Generación de Código RAT', () => {
     it('debería generar código con formato RAT-InicialesArea-InicialesProceso-Numero', async () => {
       // Obtener área y proceso reales del seed
@@ -326,6 +455,8 @@ async function seedE2EData(prisma: PrismaService) {
     { email: 'lider@e2e.com', firstName: 'Lider', lastName: 'Proceso', roleCode: 'PROCESS_LEADER' },
     { email: 'dpo@e2e.com', firstName: 'Delegado', lastName: 'Proteccion', roleCode: 'DPO' },
     { email: 'legal@e2e.com', firstName: 'Revisor', lastName: 'Juridico', roleCode: 'LEGAL_REVIEWER' },
+    { email: 'auditor@e2e.com', firstName: 'Auditor', lastName: 'E2E', roleCode: 'AUDITOR' },
+    { email: 'security@e2e.com', firstName: 'Security', lastName: 'Lead', roleCode: 'SECURITY_LEAD' },
   ];
 
   for (const u of users) {

@@ -42,8 +42,9 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
   const port = process.env.PORT || 3001;
-  await app.listen(port);
-  console.log(`Application is running on: http://localhost:${port}/api`);
+  const host = process.env.HOST || '0.0.0.0';
+  await app.listen(port, host);
+  console.log(`Application is running on: http://${host}:${port}/api`);
   console.log(`CORS allowed origins: ${Array.from(allowedOrigins).join(', ')}`);
 }
 bootstrap();

@@ -111,7 +111,7 @@ export class AuthService {
       { sub: user.id, type: 'password-reset' },
       { secret: this.config.get('JWT_SECRET'), expiresIn: '1h' },
     );
-    await this.mail.sendPasswordReset(user.email, token);
+    await this.mail.sendPasswordReset(user.email, token, user.companyId || undefined);
     await this.audit.log({
       userId: user.id,
       companyId: user.companyId || undefined,

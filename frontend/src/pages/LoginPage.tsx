@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useLogin } from '../hooks/useLogin';
 import { Shield, Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
 
@@ -93,6 +94,15 @@ export function LoginPage() {
                   'Credenciales incorrectas. Intenta de nuevo.'}
               </div>
             )}
+
+            <div className="flex items-center justify-between">
+              <Link
+                to="/forgot-password"
+                className="text-xs text-primary-600 hover:text-primary-700 hover:underline"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
 
             <button
               type="submit"

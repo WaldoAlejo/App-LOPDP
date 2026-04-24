@@ -14,23 +14,33 @@ export class MailService {
 
   private async getTransporter(companyId?: string): Promise<nodemailer.Transporter | null> {
     // 1. Primero intentar obtener configuración de la base de datos
+    let dbConfig = null;
+    
     if (companyId) {
-      const dbConfig = await this.prisma.emailConfig.findUnique({
+      dbConfig = await this.prisma.emailConfig.findUnique({
         where: { companyId },
       });
-      if (dbConfig && dbConfig.isActive) {
-        return nodemailer.createTransport({
-          host: dbConfig.smtpHost,
-          port: dbConfig.smtpPort,
-          secure: dbConfig.smtpPort === 465,
-          requireTLS: dbConfig.smtpPort === 587,
-          tls: {
-            ciphers: 'SSLv3',
-            rejectUnauthorized: false,
-          },
-          auth: { user: dbConfig.smtpUser, pass: dbConfig.smtpPass },
-        });
-      }
+    }
+    
+    // Si no hay config para esa empresa, buscar cualquier config activa
+    if (!dbConfig) {
+      dbConfig = await this.prisma.emailConfig.findFirst({
+        where: { isActive: true },
+      });
+    }
+    
+    if (dbConfig && dbConfig.isActive) {
+      return nodemailer.createTransport({
+        host: dbConfig.smtpHost,
+        port: dbConfig.smtpPort,
+        secure: dbConfig.smtpPort === 465,
+        requireTLS: dbConfig.smtpPort === 587,
+        tls: {
+          ciphers: 'SSLv3',
+          rejectUnauthorized: false,
+        },
+        auth: { user: dbConfig.smtpUser, pass: dbConfig.smtpPass },
+      });
     }
 
     // 2. Fallback a variables de entorno
@@ -57,15 +67,26 @@ export class MailService {
   }
 
   private async getFromAddress(companyId?: string): Promise<string> {
+    let dbConfig = null;
+    
     if (companyId) {
-      const dbConfig = await this.prisma.emailConfig.findUnique({
+      dbConfig = await this.prisma.emailConfig.findUnique({
         where: { companyId },
         select: { smtpFrom: true, smtpUser: true },
       });
-      if (dbConfig) {
-        return dbConfig.smtpFrom || dbConfig.smtpUser;
-      }
     }
+    
+    if (!dbConfig) {
+      dbConfig = await this.prisma.emailConfig.findFirst({
+        where: { isActive: true },
+        select: { smtpFrom: true, smtpUser: true },
+      });
+    }
+    
+    if (dbConfig) {
+      return dbConfig.smtpFrom || dbConfig.smtpUser;
+    }
+    
     return this.config.get('SMTP_USER') || 'dpo@servientrega.com.ec';
   }
 

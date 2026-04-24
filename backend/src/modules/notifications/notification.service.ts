@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailConfigService } from '../email-config/email-config.service';
 
@@ -9,7 +10,12 @@ export class NotificationService {
   constructor(
     private prisma: PrismaService,
     private emailConfigService: EmailConfigService,
+    private config: ConfigService,
   ) {}
+
+  private getFrontendUrl(): string {
+    return this.config.get('FRONTEND_URL') || 'http://localhost:5173';
+  }
 
   private async createTransporter(companyId: string) {
     const config = await this.emailConfigService.getSmtpConfig(companyId);
@@ -108,7 +114,7 @@ export class NotificationService {
           </ol>
 
           <div style="text-align: center; margin: 25px 0;">
-            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/treatments/${treatment.id}/edit" 
+            <a href="${this.getFrontendUrl()}/treatments/${treatment.id}/edit" 
                style="background: #C41E3A; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
               Ir al tratamiento
             </a>
@@ -179,7 +185,7 @@ export class NotificationService {
             ${comment ? `<div style="background: #fffbeb; border: 1px solid #f59e0b; padding: 10px; margin: 15px 0; border-radius: 5px;"><p style="margin: 0; font-size: 12px; color: #92400e;"><strong>Comentario:</strong> ${comment}</p></div>` : ''}
 
             <div style="text-align: center; margin: 25px 0;">
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/treatments/${treatment.id}/edit" 
+              <a href="${this.getFrontendUrl()}/treatments/${treatment.id}/edit" 
                  style="background: ${status.color}; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
                 Ver tratamiento
               </a>
@@ -209,7 +215,7 @@ export class NotificationService {
             </div>
 
             <div style="text-align: center; margin: 25px 0;">
-              <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/reviews/${treatment.id}" 
+              <a href="${this.getFrontendUrl()}/reviews/${treatment.id}" 
                  style="background: #3B82F6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
                 Revisar tratamiento
               </a>

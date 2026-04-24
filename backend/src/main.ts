@@ -5,18 +5,28 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const configuredOrigins = (process.env.FRONTEND_URL || '')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+  // CORS: solo permite el origen configurado en FRONTEND_URL
+  // En desarrollo se puede usar FRONTEND_URL=http://localhost:5173
+  // En producción se configura la URL real del frontend
+  const frontendUrl = process.env.FRONTEND_URL;
+  const allowedOrigins = new Set<string>();
 
-  const allowedOrigins = new Set([
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:5174',
-    'http://127.0.0.1:5174',
-    ...configuredOrigins,
-  ]);
+  if (frontendUrl) {
+    frontendUrl
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+      .forEach((origin) => allowedOrigins.add(origin));
+  }
+
+  // En desarrollo, permitir localhost si no hay FRONTEND_URL configurada
+  const isDev = process.env.NODE_ENV !== 'production';
+  if (isDev && allowedOrigins.size === 0) {
+    allowedOrigins.add('http://localhost:5173');
+    allowedOrigins.add('http://127.0.0.1:5173');
+    allowedOrigins.add('http://localhost:5174');
+    allowedOrigins.add('http://127.0.0.1:5174');
+  }
 
   app.setGlobalPrefix('api');
   app.enableCors({
@@ -25,7 +35,6 @@ async function bootstrap() {
         callback(null, true);
         return;
       }
-
       callback(new Error(`Origen no permitido por CORS: ${origin}`), false);
     },
     credentials: true,
@@ -35,5 +44,6 @@ async function bootstrap() {
   const port = process.env.PORT || 3001;
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}/api`);
+  console.log(`CORS allowed origins: ${Array.from(allowedOrigins).join(', ')}`);
 }
 bootstrap();

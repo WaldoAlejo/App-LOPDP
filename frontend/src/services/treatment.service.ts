@@ -55,7 +55,9 @@ export interface Treatment {
   reviewDueDate?: string;
   createdAt: string;
   updatedAt: string;
-  company?: { id: string; legalName: string };
+  company?: { id: string; legalName: string; ruc?: string; address?: string; email?: string; phone?: string };
+  area?: { id: string; name: string };
+  process?: { id: string; name: string };
   observations?: { id: string; status: string }[];
   dataSubjects?: any[];
   treatmentDataItems?: any[];
@@ -64,6 +66,7 @@ export interface Treatment {
   internationalTransfers?: any[];
   treatmentRetention?: {
     retentionRuleId?: string;
+    retentionRule?: { name?: string };
     activeRetentionPeriod?: string;
     retentionCriteria?: string;
     legalOrContractualBasis?: string;

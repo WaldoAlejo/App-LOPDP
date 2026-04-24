@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { NotificationService } from '../notifications/notification.service';
 import { CreateTreatmentDto } from './dto/create-treatment.dto';
 import { UpdateTreatmentDto } from './dto/update-treatment.dto';
 import { ChangeStatusDto } from './dto/change-status.dto';
@@ -32,7 +33,11 @@ const OPERATIONAL_TREATMENT_ROLES = new Set(['SUPER_ADMIN', 'COMPANY_ADMIN', 'PR
 
 @Injectable()
 export class TreatmentsService {
-  constructor(private prisma: PrismaService, private audit: AuditService) {}
+  constructor(
+    private prisma: PrismaService,
+    private audit: AuditService,
+    private notificationService: NotificationService,
+  ) {}
 
   private normalizeCodeToken(value: string) {
     return value
@@ -1010,6 +1015,9 @@ export class TreatmentsService {
       oldValuesJson: JSON.stringify({ status: treatment.currentStatus }),
       newValuesJson: JSON.stringify({ status: newStatus, comment: dto.comment }),
     });
+
+    // Notificar por correo sobre el cambio de estado (no bloqueante)
+    this.notificationService.notifyStatusChange(id, newStatus, dto.comment, currentUser).catch(() => {});
 
     return updated;
   }

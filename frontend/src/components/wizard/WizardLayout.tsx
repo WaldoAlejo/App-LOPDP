@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { AlertTriangle, Loader2 } from 'lucide-react';
-import { WizardStepper } from './WizardStepper';
+import { WizardStepper, type ObservationInfo } from './WizardStepper';
 
 interface Props {
   currentStep: number;
@@ -14,6 +14,7 @@ interface Props {
   isLastStep: boolean;
   stepErrors?: string[];
   isSaving?: boolean;
+  observations?: ObservationInfo[];
 }
 
 export function WizardLayout({
@@ -27,10 +28,11 @@ export function WizardLayout({
   isLastStep,
   stepErrors = [],
   isSaving = false,
+  observations = [],
 }: Props) {
   return (
     <div className="mx-auto max-w-5xl space-y-4">
-      <WizardStepper currentStep={currentStep} onStepSelect={onStepSelect} />
+      <WizardStepper currentStep={currentStep} onStepSelect={onStepSelect} observations={observations} />
 
       <div className="rounded-xl bg-white p-6 shadow-sm">
         {stepErrors.length > 0 && (

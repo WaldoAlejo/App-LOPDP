@@ -15,6 +15,7 @@ import {
   BarChart3,
   ClipboardList,
   Shield,
+  Mail,
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
@@ -39,6 +40,7 @@ const navItems = [
   { to: '/processes', icon: GitBranch, label: 'Procesos', isVisible: canAccessManagement },
   { to: '/users', icon: Users, label: 'Usuarios', isVisible: canAccessManagement },
   { to: '/catalogs', icon: Library, label: 'Catálogos', isVisible: canAccessManagement },
+  { to: '/email-config', icon: Mail, label: 'Correo', isVisible: canAccessManagement },
 ];
 
 export function Sidebar() {

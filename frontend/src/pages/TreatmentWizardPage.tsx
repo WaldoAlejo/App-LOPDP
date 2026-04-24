@@ -861,6 +861,7 @@ export function TreatmentWizardPage() {
         isLastStep={isLastStep}
         stepErrors={stepErrors}
         isSaving={saveMutation.isPending}
+        observations={observations.map((obs) => ({ sectionCode: obs.sectionCode, status: obs.status }))}
       >
         {renderStep()}
       </WizardLayout>

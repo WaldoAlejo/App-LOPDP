@@ -16,6 +16,8 @@ import { VersionsModule } from './modules/versions/versions.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { AiAssistantModule } from './modules/ai-assistant/ai-assistant.module';
+import { EmailConfigModule } from './modules/email-config/email-config.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -36,6 +38,8 @@ import { RolesGuard } from './common/guards/roles.guard';
     ReportsModule,
     AuditModule,
     AiAssistantModule,
+    EmailConfigModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

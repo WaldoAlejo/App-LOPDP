@@ -14,6 +14,7 @@ import { ReviewDetailPage } from '../pages/ReviewDetailPage';
 import { RisksPage } from '../pages/RisksPage';
 import { ReportsPage } from '../pages/ReportsPage';
 import { AuditsPage } from '../pages/AuditsPage';
+import { EmailConfigPage } from '../pages/EmailConfigPage';
 import { useAuthStore } from '../store/authStore';
 import { canAccessAudits, canAccessManagement, canAccessReports, canAccessReviews, canAccessRisks } from '../utils/roleAccess';
 
@@ -67,6 +68,7 @@ export function AppRoutes() {
         <Route path="processes" element={<RoleRoute allow={canAccessManagement}><ProcessesPage /></RoleRoute>} />
         <Route path="users" element={<RoleRoute allow={canAccessManagement}><UsersPage /></RoleRoute>} />
         <Route path="catalogs" element={<RoleRoute allow={canAccessManagement}><CatalogsPage /></RoleRoute>} />
+        <Route path="email-config" element={<RoleRoute allow={canAccessManagement}><EmailConfigPage /></RoleRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

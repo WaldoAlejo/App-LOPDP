@@ -1,10 +1,14 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateObservationDto } from './dto/create-observation.dto';
+import { NotificationService } from '../notifications/notification.service';
 
 @Injectable()
 export class ObservationsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationService: NotificationService,
+  ) {}
 
   private assertAccessToTreatment(treatment: any, currentUser: any) {
     if (currentUser.roleCode === 'SUPER_ADMIN') {
@@ -100,6 +104,9 @@ export class ObservationsService {
       }),
     ]);
 
+    // Enviar notificación al creador del tratamiento (no bloqueante)
+    this.notificationService.notifyNewObservation(dto.treatmentId, observation, currentUser).catch(() => {});
+
     return observation;
   }
 
@@ -129,9 +136,14 @@ export class ObservationsService {
       throw new BadRequestException('Las observaciones solo se pueden cerrar mientras el tratamiento está en corrección');
     }
 
-    return this.prisma.observation.update({
+    const updated = await this.prisma.observation.update({
       where: { id },
       data: { status: 'cerrada' },
     });
+
+    // Notificar al creador de la observación que fue resuelta
+    this.notificationService.notifyObservationResolved(id, currentUser).catch(() => {});
+
+    return updated;
   }
 }

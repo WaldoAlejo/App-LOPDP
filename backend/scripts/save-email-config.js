@@ -14,24 +14,32 @@ async function main() {
 
   console.log(`✅ Empresa encontrada: ${company.legalName} (${company.id})`);
 
+  // Obtener credenciales de variables de entorno
+  const smtpPass = process.env.SMTP_PASS;
+  if (!smtpPass) {
+    console.error('❌ Variable de entorno SMTP_PASS no configurada');
+    console.error('   Ejecuta: SMTP_PASS=tu-contraseña node scripts/save-email-config.js');
+    process.exit(1);
+  }
+
   // Guardar configuración de correo
   const config = await prisma.emailConfig.upsert({
     where: { companyId: company.id },
     update: {
-      smtpHost: 'smtp-mail.outlook.com',
-      smtpPort: 587,
-      smtpUser: 'dpo@servientrega.com.ec',
-      smtpPass: 'Ecuador2025+*',
-      smtpFrom: 'dpo@servientrega.com.ec',
+      smtpHost: process.env.SMTP_HOST || 'smtp-mail.outlook.com',
+      smtpPort: Number(process.env.SMTP_PORT) || 587,
+      smtpUser: process.env.SMTP_USER || 'dpo@servientrega.com.ec',
+      smtpPass,
+      smtpFrom: process.env.SMTP_FROM || 'dpo@servientrega.com.ec',
       isActive: true,
     },
     create: {
       companyId: company.id,
-      smtpHost: 'smtp-mail.outlook.com',
-      smtpPort: 587,
-      smtpUser: 'dpo@servientrega.com.ec',
-      smtpPass: 'Ecuador2025+*',
-      smtpFrom: 'dpo@servientrega.com.ec',
+      smtpHost: process.env.SMTP_HOST || 'smtp-mail.outlook.com',
+      smtpPort: Number(process.env.SMTP_PORT) || 587,
+      smtpUser: process.env.SMTP_USER || 'dpo@servientrega.com.ec',
+      smtpPass,
+      smtpFrom: process.env.SMTP_FROM || 'dpo@servientrega.com.ec',
       isActive: true,
     },
   });
@@ -47,7 +55,7 @@ async function main() {
   console.log('');
   console.log('🚀 Las notificaciones automáticas están configuradas y listas para usar!');
 
-  await prisma.disconnect();
+  await prisma.$disconnect();
 }
 
 main().catch(e => {

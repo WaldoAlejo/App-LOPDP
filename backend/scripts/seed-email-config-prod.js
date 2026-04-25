@@ -4,6 +4,14 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🔧 Configurando correo en base de datos...');
 
+  // Obtener credenciales de variables de entorno
+  const smtpPass = process.env.SMTP_PASS;
+  if (!smtpPass) {
+    console.error('❌ Variable de entorno SMTP_PASS no configurada');
+    console.error('   Ejecuta: SMTP_PASS=tu-contraseña node scripts/seed-email-config-prod.js');
+    process.exit(1);
+  }
+
   // Buscar la empresa de Servientrega
   const company = await prisma.company.findFirst({
     where: { ruc: '0990010931001' },
@@ -20,20 +28,20 @@ async function main() {
   const config = await prisma.emailConfig.upsert({
     where: { companyId: company.id },
     update: {
-      smtpHost: 'smtp-mail.outlook.com',
-      smtpPort: 587,
-      smtpUser: 'dpo@servientrega.com.ec',
-      smtpPass: 'Ecuador2025+*',
-      smtpFrom: 'dpo@servientrega.com.ec',
+      smtpHost: process.env.SMTP_HOST || 'smtp-mail.outlook.com',
+      smtpPort: Number(process.env.SMTP_PORT) || 587,
+      smtpUser: process.env.SMTP_USER || 'dpo@servientrega.com.ec',
+      smtpPass,
+      smtpFrom: process.env.SMTP_FROM || 'dpo@servientrega.com.ec',
       isActive: true,
     },
     create: {
       companyId: company.id,
-      smtpHost: 'smtp-mail.outlook.com',
-      smtpPort: 587,
-      smtpUser: 'dpo@servientrega.com.ec',
-      smtpPass: 'Ecuador2025+*',
-      smtpFrom: 'dpo@servientrega.com.ec',
+      smtpHost: process.env.SMTP_HOST || 'smtp-mail.outlook.com',
+      smtpPort: Number(process.env.SMTP_PORT) || 587,
+      smtpUser: process.env.SMTP_USER || 'dpo@servientrega.com.ec',
+      smtpPass,
+      smtpFrom: process.env.SMTP_FROM || 'dpo@servientrega.com.ec',
       isActive: true,
     },
   });

@@ -7,7 +7,7 @@ export interface CurrentUser {
   userId: string;
 
   /** User email */
-  email: string;
+  email?: string;
 
   /** Role code for authorization checks */
   roleCode: string;

@@ -6,18 +6,23 @@ services:
     container_name: rat_db_local
     restart: unless-stopped
     environment:
-      POSTGRES_USER: rat_user
-      POSTGRES_PASSWORD: rat_password
-      POSTGRES_DB: rat_db
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-rat_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-rat_password}
+      POSTGRES_DB: ${POSTGRES_DB:-rat_db}
+    # Do NOT expose PostgreSQL port to host in any environment
+    # Only accessible within Docker network
+    # ports:
+    #   - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U rat_user -d rat_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rat_user} -d ${POSTGRES_DB:-rat_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
+    # Security options
+    security_opt:
+      - no-new-privileges:true
 
   backend:
     build:
@@ -28,7 +33,7 @@ services:
     env_file:
       - ./backend/.env.local
     environment:
-      DATABASE_URL: postgresql://rat_user:rat_password@db:5432/rat_db?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rat_user}:${POSTGRES_PASSWORD:-rat_password}@db:5432/${POSTGRES_DB:-rat_db}?schema=public
     ports:
       - "3001:3001"
     volumes:
@@ -39,6 +44,9 @@ services:
         condition: service_healthy
     command: >
       sh -c "npx prisma migrate dev --name init && npm run start:dev"
+    # Security options
+    security_opt:
+      - no-new-privileges:true
 
   frontend:
     build:
@@ -55,6 +63,9 @@ services:
       - /app/node_modules
     depends_on:
       - backend
+    # Security options
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
   postgres_data:

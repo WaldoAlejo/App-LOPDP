@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { authService } from './auth.service';
 import { useAuthStore } from '../store/authStore';
 
@@ -7,18 +7,28 @@ if (!apiUrl) {
   throw new Error('VITE_API_URL no está configurada');
 }
 
+// Validate API URL format
+if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
+  throw new Error('VITE_API_URL debe comenzar con http:// o https://');
+}
+
 export const api = axios.create({
   baseURL: apiUrl,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 30000, // 30 second timeout
+  withCredentials: true,
 });
 
-api.interceptors.request.use((config) => {
+// Request interceptor: add auth token
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = localStorage.getItem('access_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // Add security headers
+  config.headers['X-Requested-With'] = 'XMLHttpRequest';
   return config;
 });
 
@@ -36,11 +46,17 @@ const processQueue = (error: any, token: string | null = null) => {
   failedQueue = [];
 };
 
+// Response interceptor: handle token refresh and errors
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
+    if (!originalRequest) {
+      return Promise.reject(error);
+    }
+
+    // Handle 401 Unauthorized
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
@@ -77,6 +93,16 @@ api.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
+    }
+
+    // Handle 403 Forbidden
+    if (error.response?.status === 403) {
+      console.error('Acceso denegado');
+    }
+
+    // Handle rate limiting (429)
+    if (error.response?.status === 429) {
+      console.error('Demasiadas solicitudes. Por favor intente más tarde.');
     }
 
     return Promise.reject(error);

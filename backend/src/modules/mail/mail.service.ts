@@ -36,8 +36,8 @@ export class MailService {
         secure: dbConfig.smtpPort === 465,
         requireTLS: dbConfig.smtpPort === 587,
         tls: {
-          ciphers: 'SSLv3',
-          rejectUnauthorized: false,
+          minVersion: 'TLSv1.2',
+          rejectUnauthorized: true,
         },
         auth: { user: dbConfig.smtpUser, pass: dbConfig.smtpPass },
       });
@@ -56,8 +56,8 @@ export class MailService {
         secure: false,
         requireTLS: true,
         tls: {
-          ciphers: 'SSLv3',
-          rejectUnauthorized: false,
+          minVersion: 'TLSv1.2',
+          rejectUnauthorized: true,
         },
         auth: { user: smtpUser, pass: smtpPass },
       });

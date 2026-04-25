@@ -1,13 +1,41 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, VersioningType } from '@nestjs/common';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Security headers via Helmet
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "blob:"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+        upgradeInsecureRequests: [],
+      },
+    },
+    crossOriginEmbedderPolicy: false,
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true,
+    },
+  }));
+
+  // API Versioning
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: '1',
+  });
+
   // CORS: solo permite el origen configurado en FRONTEND_URL
-  // En desarrollo se puede usar FRONTEND_URL=http://localhost:5173
-  // En producción se configura la URL real del frontend
   const frontendUrl = process.env.FRONTEND_URL;
   const allowedOrigins = new Set<string>();
 
@@ -24,8 +52,6 @@ async function bootstrap() {
   if (isDev && allowedOrigins.size === 0) {
     allowedOrigins.add('http://localhost:5173');
     allowedOrigins.add('http://127.0.0.1:5173');
-    allowedOrigins.add('http://localhost:5174');
-    allowedOrigins.add('http://127.0.0.1:5174');
   }
 
   app.setGlobalPrefix('api');
@@ -38,8 +64,22 @@ async function bootstrap() {
       callback(new Error(`Origen no permitido por CORS: ${origin}`), false);
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    maxAge: 86400,
   });
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+
+  // Global validation pipe
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+      transformOptions: {
+        enableImplicitConversion: false,
+      },
+    }),
+  );
 
   const port = process.env.PORT || 3001;
   const host = process.env.HOST || '0.0.0.0';

@@ -1,11 +1,18 @@
 FROM node:20-alpine
 
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && adduser -S nodeuser -u 1001
+
 WORKDIR /app
 
 COPY package*.json ./
 RUN npm ci
 
 COPY . .
+
+# Change ownership to non-root user
+RUN chown -R nodeuser:nodejs /app
+USER nodeuser
 
 EXPOSE 5173
 

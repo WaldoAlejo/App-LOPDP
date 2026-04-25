@@ -6,9 +6,11 @@ frontend/node_modules
 backend/dist
 frontend/dist
 
-# Environment files - .env se versiona para producción
-# backend/.env
-# frontend/.env
+# Environment files - NUNCA versionar archivos con secretos
+backend/.env
+backend/.env.local
+frontend/.env
+frontend/.env.local
 !backend/.env.example
 !frontend/.env.example
 

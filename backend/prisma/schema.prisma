@@ -409,6 +409,13 @@ model Treatment {
   attachments               Attachment[]
 
   @@unique([companyId, code, version])
+  @@index([companyId])
+  @@index([currentStatus])
+  @@index([companyId, currentStatus])
+  @@index([createdByUserId])
+  @@index([areaId])
+  @@index([processId])
+  @@index([createdAt])
   @@map("treatments")
 }
 
@@ -643,6 +650,10 @@ model RefreshToken {
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
   @@map("refresh_tokens")
 }
 
@@ -661,6 +672,11 @@ model Audit {
 
   company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  @@index([userId])
+  @@index([companyId])
+  @@index([action])
+  @@index([entityName])
+  @@index([createdAt])
   @@map("audits")
 }
 

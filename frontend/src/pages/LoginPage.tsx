@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLogin } from '../hooks/useLogin';
 import { Shield, Eye, EyeOff, Loader2, Lock, Mail } from 'lucide-react';
+import { sanitizeInput } from '../utils/security';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,7 +12,10 @@ export function LoginPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    login.mutate({ email, password });
+    login.mutate({
+      email: sanitizeInput(email.trim()),
+      password: sanitizeInput(password),
+    });
   };
 
   return (

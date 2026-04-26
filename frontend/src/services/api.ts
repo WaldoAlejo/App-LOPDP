@@ -1,6 +1,7 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { authService } from './auth.service';
 import { useAuthStore } from '../store/authStore';
+import { sanitizePayload } from '../utils/sanitizePayload';
 
 const apiUrl = import.meta.env.VITE_API_URL;
 if (!apiUrl) {
@@ -21,9 +22,15 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-// Request interceptor: add security headers
+// Request interceptor: add security headers and sanitize payload
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   config.headers['X-Requested-With'] = 'XMLHttpRequest';
+
+  // Sanitize request body for mutating methods to prevent XSS injection
+  if (config.data && ['post', 'put', 'patch'].includes(config.method?.toLowerCase() || '')) {
+    config.data = sanitizePayload(config.data);
+  }
+
   return config;
 });
 

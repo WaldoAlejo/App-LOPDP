@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { authService } from '../services/auth.service';
 import { Mail, ArrowLeft, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { sanitizeInput } from '../utils/security';
 
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -14,7 +15,7 @@ export function ForgotPasswordPage() {
     setResult(null);
 
     try {
-      await authService.forgotPassword(email);
+      await authService.forgotPassword(sanitizeInput(email.trim()));
       setResult({
         success: true,
         message: 'Si el correo existe en nuestro sistema, recibirás instrucciones para restablecer tu contraseña.',

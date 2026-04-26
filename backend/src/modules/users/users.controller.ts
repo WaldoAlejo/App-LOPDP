@@ -1,18 +1,10 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Patch,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { CurrentUser as CurrentUserType } from '../../common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -23,7 +15,7 @@ export class UsersController {
 
   @Get()
   findAll(
-    @CurrentUser() currentUser: any,
+    @CurrentUser() currentUser: CurrentUserType,
     @Query('companyId') companyId?: string,
     @Query('areaId') areaId?: string,
     @Query('search') search?: string,
@@ -33,30 +25,30 @@ export class UsersController {
   }
 
   @Get('me')
-  getMe(@CurrentUser() currentUser: any) {
+  getMe(@CurrentUser() currentUser: CurrentUserType) {
     return this.usersService.findOne(currentUser.userId, currentUser);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @CurrentUser() currentUser: any) {
+  findOne(@Param('id') id: string, @CurrentUser() currentUser: CurrentUserType) {
     return this.usersService.findOne(id, currentUser);
   }
 
   @Post()
   @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO')
-  create(@Body() dto: CreateUserDto, @CurrentUser() currentUser: any) {
+  create(@Body() dto: CreateUserDto, @CurrentUser() currentUser: CurrentUserType) {
     return this.usersService.create(dto, currentUser);
   }
 
   @Patch(':id')
   @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO')
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto, @CurrentUser() currentUser: any) {
+  update(@Param('id') id: string, @Body() dto: UpdateUserDto, @CurrentUser() currentUser: CurrentUserType) {
     return this.usersService.update(id, dto, currentUser);
   }
 
   @Patch(':id/status')
   @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO')
-  toggleStatus(@Param('id') id: string, @CurrentUser() currentUser: any) {
+  toggleStatus(@Param('id') id: string, @CurrentUser() currentUser: CurrentUserType) {
     return this.usersService.toggleStatus(id, currentUser);
   }
 }

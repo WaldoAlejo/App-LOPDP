@@ -21,6 +21,9 @@ describe('AuthService', () => {
     },
     refreshToken: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      delete: jest.fn(),
       deleteMany: jest.fn(),
       upsert: jest.fn(),
     },
@@ -32,7 +35,11 @@ describe('AuthService', () => {
   };
 
   const mockConfig = {
-    get: jest.fn((key: string) => key),
+    get: jest.fn((key: string) => {
+      if (key === 'JWT_ISSUER') return 'rat-test-issuer';
+      if (key === 'JWT_AUDIENCE') return 'rat-test-audience';
+      return key;
+    }),
   };
 
   const mockMail = {

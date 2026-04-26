@@ -89,7 +89,7 @@ export class TreatmentStateMachineService {
    * Validates that the status transition is allowed according to the state machine.
    */
   assertValidTransition(currentStatus: string, newStatus: string, isSuperAdmin: boolean): void {
-    if (!VALID_STATUSES.includes(newStatus as any)) {
+    if (!VALID_STATUSES.some(s => s === newStatus)) {
       throw new BadRequestException('Estado no válido');
     }
 
@@ -116,7 +116,7 @@ export class TreatmentStateMachineService {
       TreatmentStatus.SUBSANADO,
       TreatmentStatus.VALIDADO,
       TreatmentStatus.APROBADO,
-    ].includes(newStatus as any)
+    ].some(s => s === newStatus)
       ? await this.prisma.observation.count({
           where: { treatmentId, status: 'abierta' },
         })
@@ -147,7 +147,7 @@ export class TreatmentStateMachineService {
 
     if (
       newStatus === TreatmentStatus.EN_CORRECCION &&
-      [TreatmentStatus.OBSERVADO, TreatmentStatus.SUBSANADO].includes(currentStatus as any) &&
+      [TreatmentStatus.OBSERVADO, TreatmentStatus.SUBSANADO].some(s => s === currentStatus) &&
       openObservations === 0
     ) {
       throw new BadRequestException(
@@ -156,7 +156,7 @@ export class TreatmentStateMachineService {
     }
 
     if (
-      [TreatmentStatus.VALIDADO, TreatmentStatus.APROBADO].includes(newStatus as any) &&
+      [TreatmentStatus.VALIDADO, TreatmentStatus.APROBADO].some(s => s === newStatus) &&
       openObservations > 0
     ) {
       throw new BadRequestException(
@@ -181,6 +181,6 @@ export class TreatmentStateMachineService {
       TreatmentStatus.EN_CORRECCION,
       TreatmentStatus.REQUIERE_EIPD,
     ];
-    return reviewStatuses.includes(newStatus as any) ? currentUserId : currentReviewerId;
+    return reviewStatuses.some(s => s === newStatus) ? currentUserId : currentReviewerId;
   }
 }

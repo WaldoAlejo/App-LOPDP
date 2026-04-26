@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
+import type { CurrentUser } from '../../common/interfaces/current-user.interface';
 
 @Injectable()
 export class AreasService {
@@ -16,12 +17,15 @@ export class AreasService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, currentUser?: CurrentUser) {
     const area = await this.prisma.area.findUnique({
       where: { id },
       include: { company: true, processes: true },
     });
     if (!area) throw new NotFoundException('Área no encontrada');
+    if (currentUser && currentUser.roleCode !== 'SUPER_ADMIN' && area.companyId !== currentUser.companyId) {
+      throw new ForbiddenException('No tienes acceso a esta área');
+    }
     return area;
   }
 

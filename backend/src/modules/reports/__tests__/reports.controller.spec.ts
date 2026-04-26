@@ -38,7 +38,7 @@ describe('ReportsController', () => {
       const buffer = Buffer.from('excel');
       mockReportsService.generateRatMasterExcel.mockResolvedValue(buffer);
       const res = mockResponse();
-      const user = { roleCode: 'SUPER_ADMIN', companyId: 'c1', userId: 'u1' };
+      const user = { roleCode: 'SUPER_ADMIN' as const, companyId: 'c1', userId: 'u1' };
 
       await controller.downloadRatMasterExcel('c2', user, res);
 
@@ -52,7 +52,7 @@ describe('ReportsController', () => {
       const buffer = Buffer.from('excel');
       mockReportsService.generateRatMasterExcel.mockResolvedValue(buffer);
       const res = mockResponse();
-      const user = { roleCode: 'DPO', companyId: 'c1', userId: 'u1' };
+      const user = { roleCode: 'DPO' as const, companyId: 'c1', userId: 'u1' };
 
       await controller.downloadRatMasterExcel('c2', user, res);
 
@@ -66,7 +66,7 @@ describe('ReportsController', () => {
       const buffer = Buffer.from('pdf');
       mockReportsService.generateRatMasterPdf.mockResolvedValue(buffer);
       const res = mockResponse();
-      const user = { roleCode: 'SUPER_ADMIN', companyId: 'c1', userId: 'u1' };
+      const user = { roleCode: 'SUPER_ADMIN' as const, companyId: 'c1', userId: 'u1' };
 
       await controller.downloadRatMasterPdf('c2', user, res);
 
@@ -80,7 +80,7 @@ describe('ReportsController', () => {
       const buffer = Buffer.from('pdf');
       mockReportsService.generateRatMasterPdf.mockResolvedValue(buffer);
       const res = mockResponse();
-      const user = { roleCode: 'DPO', companyId: 'c1', userId: 'u1' };
+      const user = { roleCode: 'DPO' as const, companyId: 'c1', userId: 'u1' };
 
       await controller.downloadRatMasterPdf('c2', user, res);
 

@@ -26,7 +26,7 @@ describe('AuditController', () => {
 
   it('should return audit logs for SUPER_ADMIN without company filter', async () => {
     mockAuditService.findMany.mockResolvedValue({ data: [], total: 0 });
-    const user = { role: 'SUPER_ADMIN', companyId: 'c1' };
+    const user = { userId: 'u1', roleCode: 'SUPER_ADMIN' as const, companyId: 'c1' };
 
     const result = await controller.findAll(user, undefined, undefined, undefined, undefined, undefined, '0', '20');
 
@@ -38,7 +38,7 @@ describe('AuditController', () => {
 
   it('should filter by companyId for non-super-admin', async () => {
     mockAuditService.findMany.mockResolvedValue({ data: [], total: 0 });
-    const user = { role: 'AUDITOR', companyId: 'c1' };
+    const user = { userId: 'u1', roleCode: 'AUDITOR' as const, companyId: 'c1' };
 
     await controller.findAll(user);
 

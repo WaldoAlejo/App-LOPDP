@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProcessDto } from './dto/create-process.dto';
 import { UpdateProcessDto } from './dto/update-process.dto';
+import type { CurrentUser } from '../../common/interfaces/current-user.interface';
 
 @Injectable()
 export class ProcessesService {
@@ -18,12 +19,15 @@ export class ProcessesService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, currentUser?: CurrentUser) {
     const process = await this.prisma.process.findUnique({
       where: { id },
       include: { company: true, area: true },
     });
     if (!process) throw new NotFoundException('Proceso no encontrado');
+    if (currentUser && currentUser.roleCode !== 'SUPER_ADMIN' && process.companyId !== currentUser.companyId) {
+      throw new ForbiddenException('No tienes acceso a este proceso');
+    }
     return process;
   }
 

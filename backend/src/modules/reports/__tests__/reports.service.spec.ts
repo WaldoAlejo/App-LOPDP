@@ -3,13 +3,19 @@ import { ReportsService } from '../reports.service';
 import { PrismaService } from '../../prisma/prisma.service';
 
 jest.mock('exceljs', () => {
+  const mockCell = { value: '', font: {}, fill: {}, alignment: {}, border: {} };
+  const mockWorksheet = {
+    addRow: jest.fn().mockReturnValue({ eachCell: jest.fn(), getCell: jest.fn().mockReturnValue({ value: '', font: {}, fill: {} }) }),
+    mergeCells: jest.fn(),
+    getCell: jest.fn().mockReturnValue(mockCell),
+    getRow: jest.fn().mockReturnValue({ height: 0 }),
+    columns: [],
+  };
   return {
     Workbook: jest.fn().mockImplementation(() => ({
       creator: '',
       created: null,
-      addWorksheet: jest.fn().mockReturnValue({
-        addRow: jest.fn(),
-      }),
+      addWorksheet: jest.fn().mockReturnValue(mockWorksheet),
       xlsx: {
         writeBuffer: jest.fn().mockResolvedValue(Buffer.from('excel-buffer')),
       },
@@ -54,6 +60,8 @@ describe('ReportsService', () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
+
+  const mockUser = { userId: 'u1', roleCode: 'SUPER_ADMIN' as const };
 
   const mockTreatment = {
     id: 't1',
@@ -102,7 +110,7 @@ describe('ReportsService', () => {
     it('should generate an Excel buffer for a company', async () => {
       mockPrisma.treatment.findMany.mockResolvedValue([mockTreatment]);
 
-      const result = await service.generateRatMasterExcel('c1');
+      const result = await service.generateRatMasterExcel(mockUser, 'c1');
 
       expect(prisma.treatment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -118,7 +126,7 @@ describe('ReportsService', () => {
     it('should return an empty Excel when no treatments exist', async () => {
       mockPrisma.treatment.findMany.mockResolvedValue([]);
 
-      const result = await service.generateRatMasterExcel('c1');
+      const result = await service.generateRatMasterExcel(mockUser, 'c1');
 
       expect(prisma.treatment.findMany).toHaveBeenCalled();
       expect(result).toBeInstanceOf(Buffer);
@@ -129,7 +137,7 @@ describe('ReportsService', () => {
     it('should generate a PDF buffer for a company', async () => {
       mockPrisma.treatment.findMany.mockResolvedValue([mockTreatment]);
 
-      const result = await service.generateRatMasterPdf('c1');
+      const result = await service.generateRatMasterPdf(mockUser, 'c1');
 
       expect(prisma.treatment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -145,7 +153,7 @@ describe('ReportsService', () => {
     it('should return a PDF even when no treatments exist', async () => {
       mockPrisma.treatment.findMany.mockResolvedValue([]);
 
-      const result = await service.generateRatMasterPdf('c1');
+      const result = await service.generateRatMasterPdf(mockUser, 'c1');
 
       expect(prisma.treatment.findMany).toHaveBeenCalled();
       expect(result).toBeInstanceOf(Buffer);

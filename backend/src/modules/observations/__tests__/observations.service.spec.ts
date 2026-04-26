@@ -2,14 +2,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ObservationsService } from '../observations.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationService } from '../../notifications/notification.service';
 
 describe('ObservationsService', () => {
   let service: ObservationsService;
   let prisma: PrismaService;
 
   const mockPrisma = {
+    $transaction: jest.fn((ops) => Promise.all(ops)),
     treatment: {
       findUnique: jest.fn(),
+      update: jest.fn(),
     },
     observation: {
       findMany: jest.fn(),
@@ -24,6 +27,7 @@ describe('ObservationsService', () => {
       providers: [
         ObservationsService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: NotificationService, useValue: { notifyNewObservation: jest.fn().mockResolvedValue(undefined), notifyObservationResolved: jest.fn().mockResolvedValue(undefined) } },
       ],
     }).compile();
 

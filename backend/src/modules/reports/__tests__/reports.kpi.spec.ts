@@ -28,6 +28,8 @@ describe('ReportsService - KPIs', () => {
     jest.clearAllMocks();
   });
 
+  const mockUser = { userId: 'u1', roleCode: 'SUPER_ADMIN' as const };
+
   it('should return aggregated KPIs', async () => {
     mockPrisma.treatment.findMany.mockResolvedValue([
       {
@@ -56,11 +58,10 @@ describe('ReportsService - KPIs', () => {
       },
     ]);
 
-    const result = await service.getKpis('c1');
+    const result = await service.getKpis(mockUser, 'c1');
 
     expect(prisma.treatment.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { companyId: 'c1' },
         include: { area: true, observations: true, riskAssessment: true },
       }),
     );
@@ -80,7 +81,7 @@ describe('ReportsService - KPIs', () => {
   it('should return zero values when no treatments exist', async () => {
     mockPrisma.treatment.findMany.mockResolvedValue([]);
 
-    const result = await service.getKpis('c1');
+    const result = await service.getKpis(mockUser, 'c1');
 
     expect(result.totalTreatments).toBe(0);
     expect(result.pendingTreatments).toBe(0);

@@ -10,7 +10,7 @@ export interface Column<T> {
 }
 
 interface DataTableProps<T extends { id: string }> {
-  data: T[];
+  data?: T[];
   columns: Column<T>[];
   isLoading?: boolean;
   emptyMessage?: string;
@@ -46,7 +46,7 @@ export function DataTable<T extends { id: string }>({
     );
   }
 
-  if (data.length === 0) {
+  if (!data || data.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
         {emptyMessage}
@@ -75,7 +75,7 @@ export function DataTable<T extends { id: string }>({
           </tr>
         </thead>
         <tbody>
-          {data.map((item) => (
+          {(data || []).map((item) => (
             <tr
               key={item.id}
               className="border-b border-gray-100 hover:bg-gray-50 transition-colors"

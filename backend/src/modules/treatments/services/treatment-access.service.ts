@@ -17,7 +17,7 @@ export class TreatmentAccessService {
       return {};
     }
 
-    if (ROLE_SETS.COMPANY_WIDE_TREATMENT.has(currentUser.roleCode as any)) {
+    if (ROLE_SETS.COMPANY_WIDE_TREATMENT.has(currentUser.roleCode)) {
       return { companyId: currentUser.companyId };
     }
 
@@ -49,7 +49,7 @@ export class TreatmentAccessService {
       throw new ForbiddenException('No tienes permiso para ver este tratamiento');
     }
 
-    if (ROLE_SETS.COMPANY_WIDE_TREATMENT.has(currentUser.roleCode as any)) {
+    if (ROLE_SETS.COMPANY_WIDE_TREATMENT.has(currentUser.roleCode)) {
       return;
     }
 

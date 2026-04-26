@@ -1,4 +1,5 @@
 import { Controller, Post, Body, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import type { Request as ExpressRequest } from 'express';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { Public } from '../../common/decorators/public.decorator';
@@ -32,7 +33,7 @@ export class AuthController {
   @Post('logout')
   @SkipThrottle()
   @HttpCode(HttpStatus.OK)
-  async logout(@Request() req: any) {
+  async logout(@Request() req: ExpressRequest & { user: { sub: string } }) {
     return this.authService.logout(req.user.sub);
   }
 
@@ -56,7 +57,7 @@ export class AuthController {
   @Post('change-password')
   @SkipThrottle()
   @HttpCode(HttpStatus.OK)
-  async changePassword(@Request() req: any, @Body() dto: ChangePasswordDto) {
+  async changePassword(@Request() req: ExpressRequest & { user: { sub: string } }, @Body() dto: ChangePasswordDto) {
     return this.authService.changePassword(req.user.sub, dto);
   }
 }

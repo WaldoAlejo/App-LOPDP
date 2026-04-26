@@ -1,7 +1,9 @@
 import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { CurrentUser } from '../../common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -9,8 +11,11 @@ import { UpdateUserDto } from './dto/update-user.dto';
 export class UsersService {
   constructor(private prisma: PrismaService, private audit: AuditService) {}
 
-  async findAll(currentUser: any, query: { companyId?: string; areaId?: string; search?: string; roleCode?: string }) {
-    const where: any = {};
+  async findAll(
+    currentUser: CurrentUser,
+    query: { companyId?: string; areaId?: string; search?: string; roleCode?: string },
+  ) {
+    const where: Prisma.UserWhereInput = {};
 
     if (currentUser.roleCode !== 'SUPER_ADMIN') {
       where.companyId = currentUser.companyId;
@@ -51,7 +56,7 @@ export class UsersService {
     }));
   }
 
-  async findOne(id: string, currentUser: any) {
+  async findOne(id: string, currentUser: CurrentUser) {
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: { role: true, company: true, area: true },
@@ -63,16 +68,16 @@ export class UsersService {
     return user;
   }
 
-  async create(dto: CreateUserDto, currentUser: any) {
+  async create(dto: CreateUserDto, currentUser: CurrentUser) {
     const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (existing) throw new ConflictException('El correo ya está registrado');
 
     if (currentUser.roleCode !== 'SUPER_ADMIN') {
-      dto.companyId = currentUser.companyId;
+      (dto as CreateUserDto & { companyId?: string }).companyId = currentUser.companyId;
     }
 
     const passwordHash = await bcrypt.hash(dto.password, 10);
-    const { password, ...rest } = dto;
+    const { password, ...rest } = dto as CreateUserDto & { password: string; companyId?: string };
 
     const user = await this.prisma.user.create({
       data: {
@@ -94,7 +99,7 @@ export class UsersService {
     return user;
   }
 
-  async update(id: string, dto: UpdateUserDto, currentUser: any) {
+  async update(id: string, dto: UpdateUserDto, currentUser: CurrentUser) {
     const user = await this.findOne(id, currentUser);
 
     if (dto.email && dto.email !== user.email) {
@@ -102,10 +107,10 @@ export class UsersService {
       if (existing) throw new ConflictException('El correo ya está registrado');
     }
 
-    const data: any = { ...dto };
+    const data: Prisma.UserUpdateInput = { ...dto };
     if (dto.password) {
-      data.passwordHash = await bcrypt.hash(dto.password, 10);
-      delete data.password;
+      data.passwordHash = await bcrypt.hash(dto.password, 12);
+      delete (data as any).password;
     }
 
     const updated = await this.prisma.user.update({
@@ -127,7 +132,7 @@ export class UsersService {
     return updated;
   }
 
-  async toggleStatus(id: string, currentUser: any) {
+  async toggleStatus(id: string, currentUser: CurrentUser) {
     const user = await this.findOne(id, currentUser);
     const updated = await this.prisma.user.update({
       where: { id },

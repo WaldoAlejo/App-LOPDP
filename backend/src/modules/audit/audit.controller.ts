@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { CurrentUser as CurrentUserType } from '../../common';
 
 @Controller('audits')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -13,7 +14,7 @@ export class AuditController {
   @Get()
   @Roles('SUPER_ADMIN', 'DPO', 'AUDITOR', 'SECURITY_LEAD')
   async findAll(
-    @CurrentUser() currentUser: any,
+    @CurrentUser() currentUser: CurrentUserType,
     @Query('userId') userId?: string,
     @Query('entityName') entityName?: string,
     @Query('action') action?: string,

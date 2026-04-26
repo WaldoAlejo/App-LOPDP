@@ -2,6 +2,8 @@
  * Authenticated user context available in requests.
  * Populated by JwtAuthGuard after JWT validation.
  */
+import type { RoleCodeType } from '../constants/roles.constant';
+
 export interface CurrentUser {
   /** User UUID */
   userId: string;
@@ -9,8 +11,14 @@ export interface CurrentUser {
   /** User email */
   email?: string;
 
+  /** User first name */
+  firstName?: string;
+
+  /** User last name */
+  lastName?: string;
+
   /** Role code for authorization checks */
-  roleCode: string;
+  roleCode: RoleCodeType;
 
   /** Company UUID (null for SUPER_ADMIN) */
   companyId?: string;

@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { CurrentUser as CurrentUserType } from '../../common';
 import { CreateProcessDto } from './dto/create-process.dto';
 import { UpdateProcessDto } from './dto/update-process.dto';
 
@@ -14,7 +15,7 @@ export class ProcessesController {
 
   @Get()
   findAll(
-    @CurrentUser() currentUser: any,
+    @CurrentUser() currentUser: CurrentUserType,
     @Query('companyId') companyId?: string,
     @Query('areaId') areaId?: string,
   ) {
@@ -23,15 +24,15 @@ export class ProcessesController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.processesService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() currentUser: CurrentUserType) {
+    return this.processesService.findOne(id, currentUser);
   }
 
   @Post()
   @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO')
-  create(@Body() dto: CreateProcessDto, @CurrentUser() currentUser: any) {
+  create(@Body() dto: CreateProcessDto, @CurrentUser() currentUser: CurrentUserType) {
     if (currentUser.roleCode !== 'SUPER_ADMIN') {
-      dto.companyId = currentUser.companyId;
+      (dto as CreateProcessDto & { companyId?: string }).companyId = currentUser.companyId!;
     }
     return this.processesService.create(dto);
   }

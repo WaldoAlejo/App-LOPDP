@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { CurrentUser as CurrentUserType } from '../../common/interfaces/current-user.interface';
 
 @Controller('email-config')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -13,14 +14,14 @@ export class EmailConfigController {
 
   @Get()
   @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO')
-  async getConfig(@CurrentUser() currentUser: any, @Query('companyId') companyId?: string) {
+  async getConfig(@CurrentUser() currentUser: CurrentUserType, @Query('companyId') companyId?: string) {
     return this.emailConfigService.getConfig(currentUser, companyId);
   }
 
   @Post()
   @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO')
   async upsertConfig(
-    @CurrentUser() currentUser: any,
+    @CurrentUser() currentUser: CurrentUserType,
     @Body() dto: EmailConfigDto,
     @Query('companyId') companyId?: string,
   ) {
@@ -30,7 +31,7 @@ export class EmailConfigController {
   @Post('test')
   @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO')
   async testConfig(
-    @CurrentUser() currentUser: any,
+    @CurrentUser() currentUser: CurrentUserType,
     @Body() dto: EmailConfigDto,
     @Query('companyId') companyId?: string,
   ) {
@@ -39,7 +40,7 @@ export class EmailConfigController {
 
   @Delete()
   @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO')
-  async deleteConfig(@CurrentUser() currentUser: any, @Query('companyId') companyId?: string) {
+  async deleteConfig(@CurrentUser() currentUser: CurrentUserType, @Query('companyId') companyId?: string) {
     await this.emailConfigService.deleteConfig(currentUser, companyId);
     return { message: 'Configuración eliminada' };
   }

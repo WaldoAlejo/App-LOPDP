@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface AuditLogInput {
@@ -43,15 +44,15 @@ export class AuditService {
     skip?: number;
     take?: number;
   }) {
-    const where: any = {};
+    const where: Prisma.AuditWhereInput = {};
     if (query.companyId) where.companyId = query.companyId;
     if (query.userId) where.userId = query.userId;
     if (query.entityName) where.entityName = { contains: query.entityName, mode: 'insensitive' };
     if (query.action) where.action = { contains: query.action, mode: 'insensitive' };
     if (query.startDate || query.endDate) {
       where.createdAt = {};
-      if (query.startDate) where.createdAt.gte = new Date(query.startDate);
-      if (query.endDate) where.createdAt.lte = new Date(query.endDate);
+      if (query.startDate) (where.createdAt as Prisma.DateTimeFilter).gte = new Date(query.startDate);
+      if (query.endDate) (where.createdAt as Prisma.DateTimeFilter).lte = new Date(query.endDate);
     }
 
     const [data, total] = await Promise.all([

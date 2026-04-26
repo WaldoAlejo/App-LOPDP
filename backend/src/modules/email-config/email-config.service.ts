@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import type { CurrentUser } from '../../common/interfaces/current-user.interface';
 
 export interface EmailConfigDto {
   smtpHost: string;
@@ -24,7 +25,7 @@ export interface EmailConfigResponse {
 export class EmailConfigService {
   constructor(private prisma: PrismaService) {}
 
-  async getConfig(currentUser: any, companyId?: string): Promise<EmailConfigResponse | null> {
+  async getConfig(currentUser: CurrentUser, companyId?: string): Promise<EmailConfigResponse | null> {
     const targetCompanyId = this.resolveCompanyId(currentUser, companyId);
     
     const config = await this.prisma.emailConfig.findUnique({
@@ -45,7 +46,7 @@ export class EmailConfigService {
     };
   }
 
-  async upsertConfig(currentUser: any, dto: EmailConfigDto, companyId?: string): Promise<EmailConfigResponse> {
+  async upsertConfig(currentUser: CurrentUser, dto: EmailConfigDto, companyId?: string): Promise<EmailConfigResponse> {
     const targetCompanyId = this.resolveCompanyId(currentUser, companyId);
 
     const config = await this.prisma.emailConfig.upsert({
@@ -80,7 +81,7 @@ export class EmailConfigService {
     };
   }
 
-  async deleteConfig(currentUser: any, companyId?: string): Promise<void> {
+  async deleteConfig(currentUser: CurrentUser, companyId?: string): Promise<void> {
     const targetCompanyId = this.resolveCompanyId(currentUser, companyId);
     
     await this.prisma.emailConfig.deleteMany({
@@ -88,7 +89,7 @@ export class EmailConfigService {
     });
   }
 
-  async testConfig(currentUser: any, dto: EmailConfigDto, companyId?: string): Promise<{ success: boolean; message: string }> {
+  async testConfig(currentUser: CurrentUser, dto: EmailConfigDto, companyId?: string): Promise<{ success: boolean; message: string }> {
     const nodemailer = await import('nodemailer');
     
     try {
@@ -136,10 +137,13 @@ export class EmailConfigService {
     });
   }
 
-  private resolveCompanyId(currentUser: any, companyId?: string): string {
+  private resolveCompanyId(currentUser: CurrentUser, companyId?: string): string {
     if (currentUser.roleCode === 'SUPER_ADMIN') {
       if (!companyId) throw new ForbiddenException('SUPER_ADMIN debe especificar companyId');
       return companyId;
+    }
+    if (!currentUser.companyId) {
+      throw new ForbiddenException('Usuario debe tener una empresa asignada');
     }
     return currentUser.companyId;
   }

@@ -22,7 +22,7 @@ interface UserForm {
   firstName: string;
   lastName: string;
   email: string;
-  password?: string;
+  password: string;
   roleId: string;
   companyId: string;
   position?: string;
@@ -45,9 +45,9 @@ export function UsersPage() {
   const crud = useCrud({
     queryKey: 'users',
     getAll: () => userService.getAll(),
-    create: (dto) => userService.create(dto),
-    update: (id, dto) => userService.update(id, dto),
-    toggleStatus: (id) => userService.toggleStatus(id),
+    create: (dto: UserForm) => userService.create(dto),
+    update: (id: string, dto: Partial<UserForm>) => userService.update(id, dto),
+    toggleStatus: (id: string) => userService.toggleStatus(id),
   });
 
   const { data: companies } = useQuery({

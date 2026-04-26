@@ -1,22 +1,20 @@
 import { PipeTransform, Injectable, ArgumentMetadata } from '@nestjs/common';
+import sanitizeHtml from 'sanitize-html';
 
 /**
  * Sanitizes string inputs to prevent XSS attacks.
- * Removes potentially dangerous HTML/script content.
+ * Uses sanitize-html library for robust HTML sanitization.
+ * For non-HTML text fields, all HTML tags are stripped.
  */
 @Injectable()
 export class SanitizePipe implements PipeTransform {
-  private readonly dangerousPatterns = [
-    /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
-    /<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi,
-    /<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi,
-    /<embed\b[^<]*(?:(?!<\/embed>)<[^<]*)*<\/embed>/gi,
-    /javascript:/gi,
-    /on\w+\s*=/gi,
-    /<\s*\/\s*script\s*>/gi,
-  ];
+  private readonly sanitizeOptions: sanitizeHtml.IOptions = {
+    allowedTags: [],
+    allowedAttributes: {},
+    disallowedTagsMode: 'discard',
+  };
 
-  transform(value: any, metadata: ArgumentMetadata): any {
+  transform(value: unknown, metadata: ArgumentMetadata): unknown {
     if (typeof value === 'string') {
       return this.sanitizeString(value);
     }
@@ -26,9 +24,9 @@ export class SanitizePipe implements PipeTransform {
     }
 
     if (value !== null && typeof value === 'object') {
-      const sanitized: any = {};
-      for (const key of Object.keys(value)) {
-        sanitized[key] = this.transform(value[key], metadata);
+      const sanitized: Record<string, unknown> = {};
+      for (const key of Object.keys(value as Record<string, unknown>)) {
+        sanitized[key] = this.transform((value as Record<string, unknown>)[key], metadata);
       }
       return sanitized;
     }
@@ -37,10 +35,10 @@ export class SanitizePipe implements PipeTransform {
   }
 
   private sanitizeString(value: string): string {
-    let sanitized = value;
-    for (const pattern of this.dangerousPatterns) {
-      sanitized = sanitized.replace(pattern, '');
-    }
-    return sanitized.trim();
+    // First trim whitespace
+    const trimmed = value.trim();
+    // Use sanitize-html to strip ALL HTML tags (allowedTags: [])
+    // This prevents all XSS vectors including encoded, nested, and obfuscated payloads
+    return sanitizeHtml(trimmed, this.sanitizeOptions);
   }
 }

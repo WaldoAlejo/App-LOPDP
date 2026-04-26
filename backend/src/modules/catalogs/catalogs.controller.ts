@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { CurrentUser as CurrentUserType } from '../../common';
 import { CreateCatalogItemDto } from './dto/create-catalog-item.dto';
 import { UpdateCatalogItemDto } from './dto/update-catalog-item.dto';
 
@@ -15,7 +16,7 @@ export class CatalogsController {
   @Get(':type')
   findAll(
     @Param('type') type: string,
-    @CurrentUser() currentUser: any,
+    @CurrentUser() currentUser: CurrentUserType,
     @Query('companyId') companyId?: string,
   ) {
     const filterCompanyId = currentUser.roleCode === 'SUPER_ADMIN' ? companyId : currentUser.companyId;
@@ -29,9 +30,9 @@ export class CatalogsController {
 
   @Post(':type')
   @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO')
-  create(@Param('type') type: string, @Body() dto: CreateCatalogItemDto, @CurrentUser() currentUser: any) {
+  create(@Param('type') type: string, @Body() dto: CreateCatalogItemDto, @CurrentUser() currentUser: CurrentUserType) {
     if (currentUser.roleCode !== 'SUPER_ADMIN' && dto.companyId === undefined) {
-      dto.companyId = currentUser.companyId;
+      (dto as CreateCatalogItemDto & { companyId?: string }).companyId = currentUser.companyId;
     }
     return this.catalogsService.create(type, dto);
   }

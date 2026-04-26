@@ -1,7 +1,8 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
+import type { CurrentUser } from '../../common/interfaces/current-user.interface';
 
 @Injectable()
 export class CompaniesService {
@@ -13,12 +14,15 @@ export class CompaniesService {
     });
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, currentUser?: CurrentUser) {
     const company = await this.prisma.company.findUnique({
       where: { id },
       include: { areas: true, processes: true, users: true },
     });
     if (!company) throw new NotFoundException('Empresa no encontrada');
+    if (currentUser && currentUser.roleCode !== 'SUPER_ADMIN' && company.id !== currentUser.companyId) {
+      throw new ForbiddenException('No tienes acceso a esta empresa');
+    }
     return company;
   }
 

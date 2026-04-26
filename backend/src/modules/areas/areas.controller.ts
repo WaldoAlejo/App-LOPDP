@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { CurrentUser as CurrentUserType } from '../../common';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
 
@@ -14,7 +15,7 @@ export class AreasController {
 
   @Get()
   findAll(
-    @CurrentUser() currentUser: any,
+    @CurrentUser() currentUser: CurrentUserType,
     @Query('companyId') companyId?: string,
   ) {
     const filterCompanyId = currentUser.roleCode === 'SUPER_ADMIN' ? companyId : currentUser.companyId;
@@ -22,15 +23,15 @@ export class AreasController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.areasService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() currentUser: CurrentUserType) {
+    return this.areasService.findOne(id, currentUser);
   }
 
   @Post()
   @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO')
-  create(@Body() dto: CreateAreaDto, @CurrentUser() currentUser: any) {
+  create(@Body() dto: CreateAreaDto, @CurrentUser() currentUser: CurrentUserType) {
     if (currentUser.roleCode !== 'SUPER_ADMIN') {
-      dto.companyId = currentUser.companyId;
+      (dto as CreateAreaDto & { companyId?: string }).companyId = currentUser.companyId!;
     }
     return this.areasService.create(dto);
   }

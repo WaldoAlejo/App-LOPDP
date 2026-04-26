@@ -47,7 +47,7 @@ describe('UsersService', () => {
   describe('findAll', () => {
     it('should return users for a company', async () => {
       mockPrisma.user.findMany.mockResolvedValue([{ ...baseUser, firstName: 'A', lastName: 'B' }]);
-      const result = await service.findAll({ roleCode: 'DPO', companyId: 'c1' }, { companyId: 'c1' });
+      const result = await service.findAll({ userId: 'u1', roleCode: 'DPO', companyId: 'c1' }, { companyId: 'c1' });
       expect(result).toHaveLength(1);
       expect(result[0].email).toBe('a@a.com');
     });
@@ -56,18 +56,18 @@ describe('UsersService', () => {
   describe('findOne', () => {
     it('should return a user', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(baseUser);
-      const result = await service.findOne('u1', { roleCode: 'DPO', companyId: 'c1' });
+      const result = await service.findOne('u1', { userId: 'u1', roleCode: 'DPO', companyId: 'c1' });
       expect(result.id).toBe('u1');
     });
 
     it('should throw NotFoundException', async () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
-      await expect(service.findOne('u1', { roleCode: 'SUPER_ADMIN' })).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('u1', { userId: 'u1', roleCode: 'SUPER_ADMIN' })).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ForbiddenException for different company', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({ id: 'u1', companyId: 'c2' });
-      await expect(service.findOne('u1', { roleCode: 'DPO', companyId: 'c1' })).rejects.toThrow(ForbiddenException);
+      await expect(service.findOne('u1', { userId: 'u1', roleCode: 'DPO', companyId: 'c1' })).rejects.toThrow(ForbiddenException);
     });
   });
 

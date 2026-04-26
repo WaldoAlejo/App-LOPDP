@@ -1,6 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+interface SuggestDto {
+  field: string;
+  treatmentName?: string;
+  mainPurpose?: string;
+  currentValue?: string;
+  context?: Record<string, unknown>;
+}
+
 @Injectable()
 export class AiAssistantService {
   constructor(private config: ConfigService) {}
@@ -246,7 +254,7 @@ Contexto actual del usuario: ${dto.context ? JSON.stringify(dto.context) : 'No d
     }
   }
 
-  private buildUserPrompt(dto: any): string {
+  private buildUserPrompt(dto: SuggestDto): string {
     let prompt = `Campo a completar: ${dto.field}\n`;
     if (dto.treatmentName) prompt += `Nombre del tratamiento: ${dto.treatmentName}\n`;
     if (dto.mainPurpose) prompt += `Finalidad principal: ${dto.mainPurpose}\n`;
@@ -256,7 +264,7 @@ Contexto actual del usuario: ${dto.context ? JSON.stringify(dto.context) : 'No d
     return prompt;
   }
 
-  private fallbackSuggest(dto: any): { suggestion: string } {
+  private fallbackSuggest(dto: SuggestDto): { suggestion: string } {
     const fallbacks: Record<string, string> = {
       mainPurpose: `Gestionar los datos personales de [titulares] para [actividad específica], garantizando el cumplimiento de las obligaciones contractuales, legales y regulatorias establecidas en la normativa ecuatoriana de protección de datos personales.`,
       secondaryPurposes: `1. Análisis estadístico interno para mejora continua de procesos\n2. Prevención de fraude y seguridad de la información\n3. Cumplimiento de obligaciones regulatorias y auditorías internas`,
@@ -269,7 +277,7 @@ Contexto actual del usuario: ${dto.context ? JSON.stringify(dto.context) : 'No d
     return { suggestion: fallbacks[dto.field] || fallbacks.mainPurpose };
   }
 
-  private fallbackValidate(treatment: Record<string, any>): {
+  private fallbackValidate(treatment: Record<string, unknown>): {
     isValid: boolean;
     score: number;
     observations: string[];
@@ -279,31 +287,31 @@ Contexto actual del usuario: ${dto.context ? JSON.stringify(dto.context) : 'No d
     const suggestions: string[] = [];
     let score = 70;
 
-    if (!treatment.name || treatment.name.length < 10) {
+    if (!(treatment.name as string)?.length || (treatment.name as string).length < 10) {
       observations.push('El nombre del tratamiento es muy corto o genérico');
       suggestions.push('Use un nombre descriptivo que indique claramente qué datos se tratan y para qué');
       score -= 10;
     }
 
-    if (!treatment.mainPurpose || treatment.mainPurpose.length < 20) {
+    if (!(treatment.mainPurpose as string)?.length || (treatment.mainPurpose as string).length < 20) {
       observations.push('La finalidad principal no está suficientemente detallada');
       suggestions.push('Describa específicamente qué se hace con los datos y para qué finalidad');
       score -= 15;
     }
 
-    if (!treatment.dataItems || treatment.dataItems.length === 0) {
+    if (!(treatment.dataItems as unknown[])?.length) {
       observations.push('No se han definido los datos personales tratados');
       suggestions.push('Identifique todos los datos personales que se procesan en esta actividad');
       score -= 20;
     }
 
-    if (!treatment.legalBases || treatment.legalBases.length === 0) {
+    if (!(treatment.legalBases as unknown[])?.length) {
       observations.push('No se ha establecido la base legal del tratamiento');
       suggestions.push('Defina la base legal que autoriza el tratamiento (ejecución de contrato, consentimiento, obligación legal, interés legítimo)');
       score -= 15;
     }
 
-    if (!treatment.securityMeasures || treatment.securityMeasures.length === 0) {
+    if (!(treatment.securityMeasures as unknown[])?.length) {
       observations.push('No se han definido medidas de seguridad');
       suggestions.push('Documente las medidas técnicas y organizativas implementadas para proteger los datos');
       score -= 10;

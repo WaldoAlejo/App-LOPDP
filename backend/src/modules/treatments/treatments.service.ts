@@ -5,7 +5,7 @@ import { NotificationService } from '../notifications/notification.service';
 import { CreateTreatmentDto } from './dto/create-treatment.dto';
 import { UpdateTreatmentDto } from './dto/update-treatment.dto';
 import { ChangeStatusDto } from './dto/change-status.dto';
-import { CurrentUser, TreatmentStatus, createPaginatedResult, PaginatedResult } from '../../common';
+import { CurrentUser, TreatmentStatus, TreatmentStatusType, createPaginatedResult, PaginatedResult } from '../../common';
 import {
   TreatmentCodeService,
   TreatmentValidationService,
@@ -142,14 +142,14 @@ export class TreatmentsService {
     this.accessService.assertUserHasCompany(currentUser);
 
     if (currentUser.roleCode !== 'SUPER_ADMIN') {
-      (dto as any).companyId = currentUser.companyId;
+      (dto as unknown as Record<string, unknown>).companyId = currentUser.companyId;
     }
 
     const generatedCode = await this.codeService.generateCode(
       dto.companyId!, dto.areaId, dto.processId,
     );
 
-    const { code: _ignoredCode, ...nestedData } = dto as any;
+    const { code: _ignoredCode, ...nestedData } = dto as unknown as Record<string, unknown>;
     this.validateCreateUpdate(nestedData);
 
     const treatment = await this.prisma.treatment.create({
@@ -177,11 +177,11 @@ export class TreatmentsService {
 
   async update(id: string, dto: UpdateTreatmentDto, currentUser: CurrentUser) {
     const treatment = await this.findOne(id, currentUser);
-    if (![TreatmentStatus.BORRADOR, TreatmentStatus.EN_EDICION, TreatmentStatus.OBSERVADO, TreatmentStatus.EN_CORRECCION].includes(treatment.currentStatus as any)) {
+    if (![TreatmentStatus.BORRADOR, TreatmentStatus.EN_EDICION, TreatmentStatus.OBSERVADO, TreatmentStatus.EN_CORRECCION].some(s => s === treatment.currentStatus)) {
       throw new BadRequestException('No se puede editar un tratamiento en el estado actual');
     }
 
-    const nestedData = dto as any;
+    const nestedData = dto as unknown as Record<string, unknown>;
     this.validateCreateUpdate(nestedData, treatment);
 
     const nextCompanyId = currentUser.roleCode === 'SUPER_ADMIN'
@@ -241,7 +241,7 @@ export class TreatmentsService {
 
     await this.createStatusHistory(id, treatment.currentStatus, newStatus, currentUser.userId, dto.comment || `Cambio de estado a ${newStatus}`);
 
-    if ([TreatmentStatus.ENVIADO, TreatmentStatus.APROBADO].includes(newStatus as any)) {
+    if ([TreatmentStatus.ENVIADO, TreatmentStatus.APROBADO].some(s => s === newStatus)) {
       await this.riskService.evaluateRisk(id);
     }
 
@@ -282,15 +282,15 @@ export class TreatmentsService {
     const where = this.accessService.buildAccessWhere(currentUser);
 
     if (currentUser.roleCode === 'SUPER_ADMIN' && query.companyId) {
-      (where as any).companyId = query.companyId;
+      (where as Record<string, unknown>).companyId = query.companyId;
     }
-    if (query.areaId) (where as any).areaId = query.areaId;
+    if (query.areaId) (where as Record<string, unknown>).areaId = query.areaId;
     if (query.status) {
       const statuses = query.status.split(',').map((s) => s.trim()).filter(Boolean);
-      (where as any).currentStatus = statuses.length > 1 ? { in: statuses } : statuses[0];
+      (where as Record<string, unknown>).currentStatus = statuses.length > 1 ? { in: statuses } : statuses[0];
     }
     if (query.search) {
-      (where as any).OR = [
+      (where as Record<string, unknown>).OR = [
         { name: { contains: query.search, mode: 'insensitive' } },
         { code: { contains: query.search, mode: 'insensitive' } },
         { mainPurpose: { contains: query.search, mode: 'insensitive' } },
@@ -322,7 +322,7 @@ export class TreatmentsService {
     });
   }
 
-  private buildTreatmentData(data: any): any {
+  private buildTreatmentData(data: Record<string, unknown>): any {
     const {
       dataSubjects, dataItems, legalBases, retention,
       securityMeasures, thirdParties, internationalTransfers,
@@ -331,29 +331,43 @@ export class TreatmentsService {
     return treatmentData;
   }
 
-  private buildNestedCreateInput(data: any): any {
-    const result: any = {};
-    if (data.dataSubjects?.length) result.dataSubjects = { create: data.dataSubjects };
-    if (data.dataItems?.length) result.treatmentDataItems = { create: data.dataItems };
-    if (data.legalBases?.length) result.treatmentLegalBases = { create: data.legalBases };
+  private buildNestedCreateInput(data: Record<string, unknown>): any {
+    const result: Record<string, unknown> = {};
+    const subjects = data.dataSubjects as unknown[] | undefined;
+    const items = data.dataItems as unknown[] | undefined;
+    const bases = data.legalBases as unknown[] | undefined;
+    const measures = data.securityMeasures as unknown[] | undefined;
+    const parties = data.thirdParties as unknown[] | undefined;
+    const transfers = data.internationalTransfers as unknown[] | undefined;
+    const lifecycle = data.lifecycle as unknown[] | undefined;
+    if (subjects?.length) result.dataSubjects = { create: subjects };
+    if (items?.length) result.treatmentDataItems = { create: items };
+    if (bases?.length) result.treatmentLegalBases = { create: bases };
     if (data.retention) result.treatmentRetention = { create: data.retention };
-    if (data.securityMeasures?.length) result.treatmentSecurityMeasures = { create: data.securityMeasures };
-    if (data.thirdParties?.length) result.treatmentThirdParties = { create: data.thirdParties };
-    if (data.internationalTransfers?.length) result.internationalTransfers = { create: data.internationalTransfers };
-    if (data.lifecycle?.length) result.lifecyclePhases = { create: data.lifecycle.map((item: any, index: number) => ({ ...item, phaseOrder: index + 1 })) };
+    if (measures?.length) result.treatmentSecurityMeasures = { create: measures };
+    if (parties?.length) result.treatmentThirdParties = { create: parties };
+    if (transfers?.length) result.internationalTransfers = { create: transfers };
+    if (lifecycle?.length) result.lifecyclePhases = { create: lifecycle.map((item, index) => ({ ...(item as Record<string, unknown>), phaseOrder: index + 1 })) };
     if (data.riskAssessment) result.riskAssessment = { create: data.riskAssessment };
     return result;
   }
 
-  private buildNestedUpdateInput(data: any): any {
-    const result: any = {};
-    if (data.dataSubjects !== undefined) result.dataSubjects = { deleteMany: {}, ...(data.dataSubjects.length ? { create: data.dataSubjects } : {}) };
-    if (data.dataItems !== undefined) result.treatmentDataItems = { deleteMany: {}, ...(data.dataItems.length ? { create: data.dataItems } : {}) };
-    if (data.legalBases !== undefined) result.treatmentLegalBases = { deleteMany: {}, ...(data.legalBases.length ? { create: data.legalBases } : {}) };
-    if (data.thirdParties !== undefined) result.treatmentThirdParties = { deleteMany: {}, ...(data.thirdParties.length ? { create: data.thirdParties } : {}) };
-    if (data.internationalTransfers !== undefined) result.internationalTransfers = { deleteMany: {}, ...(data.internationalTransfers.length ? { create: data.internationalTransfers } : {}) };
-    if (data.securityMeasures !== undefined) result.treatmentSecurityMeasures = { deleteMany: {}, ...(data.securityMeasures.length ? { create: data.securityMeasures } : {}) };
-    if (data.lifecycle !== undefined) result.lifecyclePhases = { deleteMany: {}, ...(data.lifecycle.length ? { create: data.lifecycle.map((item: any, index: number) => ({ ...item, phaseOrder: index + 1 })) } : {}) };
+  private buildNestedUpdateInput(data: Record<string, unknown>): any {
+    const result: Record<string, unknown> = {};
+    const subjects = data.dataSubjects as unknown[] | undefined;
+    const items = data.dataItems as unknown[] | undefined;
+    const bases = data.legalBases as unknown[] | undefined;
+    const parties = data.thirdParties as unknown[] | undefined;
+    const transfers = data.internationalTransfers as unknown[] | undefined;
+    const measures = data.securityMeasures as unknown[] | undefined;
+    const lifecycle = data.lifecycle as unknown[] | undefined;
+    if (subjects !== undefined) result.dataSubjects = { deleteMany: {}, ...(subjects.length ? { create: subjects } : {}) };
+    if (items !== undefined) result.treatmentDataItems = { deleteMany: {}, ...(items.length ? { create: items } : {}) };
+    if (bases !== undefined) result.treatmentLegalBases = { deleteMany: {}, ...(bases.length ? { create: bases } : {}) };
+    if (parties !== undefined) result.treatmentThirdParties = { deleteMany: {}, ...(parties.length ? { create: parties } : {}) };
+    if (transfers !== undefined) result.internationalTransfers = { deleteMany: {}, ...(transfers.length ? { create: transfers } : {}) };
+    if (measures !== undefined) result.treatmentSecurityMeasures = { deleteMany: {}, ...(measures.length ? { create: measures } : {}) };
+    if (lifecycle !== undefined) result.lifecyclePhases = { deleteMany: {}, ...(lifecycle.length ? { create: lifecycle.map((item, index) => ({ ...(item as Record<string, unknown>), phaseOrder: index + 1 })) } : {}) };
     if (data.retention !== undefined) result.treatmentRetention = { upsert: { create: data.retention, update: data.retention } };
     if (data.riskAssessment !== undefined) result.riskAssessment = { upsert: { create: data.riskAssessment, update: data.riskAssessment } };
     return result;

@@ -86,8 +86,8 @@ describe('TreatmentsService', () => {
     approvalDate: null,
   };
 
-  const mockUser = { userId: 'u1', email: 'test@test.com', roleCode: 'DPO', companyId: 'c1' };
-  const mockSuperAdmin = { userId: 'u1', email: 'test@test.com', roleCode: 'SUPER_ADMIN' };
+  const mockUser = { userId: 'u1', email: 'test@test.com', roleCode: 'DPO' as const, companyId: 'c1' };
+  const mockSuperAdmin = { userId: 'u1', email: 'test@test.com', roleCode: 'SUPER_ADMIN' as const };
 
   describe('findAll', () => {
     it('should return paginated treatments for company', async () => {

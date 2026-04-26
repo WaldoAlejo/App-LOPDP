@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import * as puppeteer from 'puppeteer';
 import { PrismaService } from '../prisma/prisma.service';
+import { CurrentUser } from '../../common';
 import { KpiResponseDto } from './dto/kpi-response.dto';
 
 @Injectable()
@@ -27,7 +28,7 @@ export class ReportsService {
     dangerLight: 'FEE2E2',
   };
 
-  private buildAccessibleTreatmentsWhere(currentUser: any, companyId?: string) {
+  private buildAccessibleTreatmentsWhere(currentUser: CurrentUser, companyId?: string) {
     if (currentUser.roleCode === 'SUPER_ADMIN') {
       return companyId ? { companyId } : {};
     }
@@ -187,7 +188,7 @@ export class ReportsService {
     }
   }
 
-  async generateRatMasterExcel(currentUser: any, companyId?: string) {
+  async generateRatMasterExcel(currentUser: CurrentUser, companyId?: string) {
     const treatments = await this.prisma.treatment.findMany({
       where: this.buildAccessibleTreatmentsWhere(currentUser, companyId),
       include: this.getTreatmentInclude(),
@@ -605,7 +606,7 @@ export class ReportsService {
     return Buffer.from(buffer);
   }
 
-  async generateRatMasterPdf(currentUser: any, companyId?: string) {
+  async generateRatMasterPdf(currentUser: CurrentUser, companyId?: string) {
     const treatments = await this.prisma.treatment.findMany({
       where: this.buildAccessibleTreatmentsWhere(currentUser, companyId),
       include: this.getTreatmentInclude(),
@@ -719,7 +720,7 @@ export class ReportsService {
     return Buffer.from(pdf);
   }
 
-  async getKpis(currentUser: any, companyId?: string): Promise<KpiResponseDto> {
+  async getKpis(currentUser: CurrentUser, companyId?: string): Promise<KpiResponseDto> {
     const treatments = await this.prisma.treatment.findMany({
       where: this.buildAccessibleTreatmentsWhere(currentUser, companyId),
       include: { area: true, observations: true, riskAssessment: true },

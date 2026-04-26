@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateObservationDto } from './dto/create-observation.dto';
 import { NotificationService } from '../notifications/notification.service';
+import { CurrentUser, ROLE_SETS } from '../../common';
 
 @Injectable()
 export class ObservationsService {
@@ -10,44 +11,44 @@ export class ObservationsService {
     private notificationService: NotificationService,
   ) {}
 
-  private assertAccessToTreatment(treatment: any, currentUser: any) {
-    if (currentUser.roleCode === 'SUPER_ADMIN') {
-      return;
-    }
+  private assertAccessToTreatment(
+    treatment: {
+      companyId: string | null;
+      createdByUserId: string;
+      treatmentResponsibleUserId: string | null;
+      process?: { responsibleUserId: string | null } | null;
+    },
+    currentUser: CurrentUser,
+  ) {
+    if (currentUser.roleCode === 'SUPER_ADMIN') return;
 
     if (treatment.companyId !== currentUser.companyId) {
       throw new ForbiddenException('No tienes permiso para acceder a las observaciones de este tratamiento');
     }
 
-    if (['DPO', 'SECURITY_LEAD', 'AUDITOR'].includes(currentUser.roleCode)) {
-      return;
-    }
+    if (ROLE_SETS.COMPANY_WIDE_TREATMENT.has(currentUser.roleCode)) return;
 
-    const hasScopedAccess = treatment.createdByUserId === currentUser.userId
-      || treatment.treatmentResponsibleUserId === currentUser.userId
-      || treatment.process?.responsibleUserId === currentUser.userId;
+    const hasScopedAccess =
+      treatment.createdByUserId === currentUser.userId ||
+      treatment.treatmentResponsibleUserId === currentUser.userId ||
+      treatment.process?.responsibleUserId === currentUser.userId;
 
     if (!hasScopedAccess) {
       throw new ForbiddenException('No tienes permiso para acceder a las observaciones de este tratamiento');
     }
   }
 
-  async findByTreatment(treatmentId: string, currentUser: any) {
+  async findByTreatment(treatmentId: string, currentUser: CurrentUser) {
     const treatment = await this.prisma.treatment.findUnique({
       where: { id: treatmentId },
       select: {
-        id: true,
-        companyId: true,
-        createdByUserId: true,
+        id: true, companyId: true, createdByUserId: true,
         treatmentResponsibleUserId: true,
         process: { select: { responsibleUserId: true } },
       },
     });
 
-    if (!treatment) {
-      throw new NotFoundException('Tratamiento no encontrado');
-    }
-
+    if (!treatment) throw new NotFoundException('Tratamiento no encontrado');
     this.assertAccessToTreatment(treatment, currentUser);
 
     return this.prisma.observation.findMany({
@@ -56,26 +57,20 @@ export class ObservationsService {
     });
   }
 
-  async create(dto: CreateObservationDto, currentUser: any) {
+  async create(dto: CreateObservationDto, currentUser: CurrentUser) {
     const treatment = await this.prisma.treatment.findUnique({
       where: { id: dto.treatmentId },
       select: {
-        id: true,
-        currentStatus: true,
-        companyId: true,
-        createdByUserId: true,
-        treatmentResponsibleUserId: true,
+        id: true, currentStatus: true, companyId: true,
+        createdByUserId: true, treatmentResponsibleUserId: true,
         process: { select: { responsibleUserId: true } },
       },
     });
 
-    if (!treatment) {
-      throw new NotFoundException('Tratamiento no encontrado');
-    }
-
+    if (!treatment) throw new NotFoundException('Tratamiento no encontrado');
     this.assertAccessToTreatment(treatment, currentUser);
 
-    if (!['SUPER_ADMIN', 'DPO'].includes(currentUser.roleCode)) {
+    if (!ROLE_SETS.REVIEW_AUTHORITY.has(currentUser.roleCode)) {
       throw new ForbiddenException('Solo el DPO puede registrar observaciones en la revisión');
     }
 
@@ -83,7 +78,6 @@ export class ObservationsService {
       throw new BadRequestException('Solo se pueden registrar observaciones durante la revisión DPO o la re-revisión de subsanaciones');
     }
 
-    // Crear la observación y cambiar el estado del tratamiento a 'observado'
     const [observation] = await this.prisma.$transaction([
       this.prisma.observation.create({
         data: {
@@ -97,39 +91,29 @@ export class ObservationsService {
       }),
       this.prisma.treatment.update({
         where: { id: dto.treatmentId },
-        data: {
-          currentStatus: 'observado',
-          reviewedByUserId: currentUser.userId,
-        },
+        data: { currentStatus: 'observado', reviewedByUserId: currentUser.userId },
       }),
     ]);
 
-    // Enviar notificación al creador del tratamiento (no bloqueante)
     this.notificationService.notifyNewObservation(dto.treatmentId, observation, currentUser).catch(() => {});
 
     return observation;
   }
 
-  async resolve(id: string, currentUser: any) {
+  async resolve(id: string, currentUser: CurrentUser) {
     const obs = await this.prisma.observation.findUnique({ where: { id } });
     if (!obs) throw new NotFoundException('Observación no encontrada');
 
     const treatment = await this.prisma.treatment.findUnique({
       where: { id: obs.treatmentId },
       select: {
-        id: true,
-        currentStatus: true,
-        companyId: true,
-        createdByUserId: true,
-        treatmentResponsibleUserId: true,
+        id: true, currentStatus: true, companyId: true,
+        createdByUserId: true, treatmentResponsibleUserId: true,
         process: { select: { responsibleUserId: true } },
       },
     });
 
-    if (!treatment) {
-      throw new NotFoundException('Tratamiento no encontrado');
-    }
-
+    if (!treatment) throw new NotFoundException('Tratamiento no encontrado');
     this.assertAccessToTreatment(treatment, currentUser);
 
     if (treatment.currentStatus !== 'en_correccion') {
@@ -141,7 +125,6 @@ export class ObservationsService {
       data: { status: 'cerrada' },
     });
 
-    // Notificar al creador de la observación que fue resuelta
     this.notificationService.notifyObservationResolved(id, currentUser).catch(() => {});
 
     return updated;

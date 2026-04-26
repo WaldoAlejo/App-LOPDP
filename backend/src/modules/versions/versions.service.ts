@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import type { CurrentUser } from '../../common/interfaces/current-user.interface';
 
 @Injectable()
 export class VersionsService {
@@ -12,7 +13,7 @@ export class VersionsService {
     });
   }
 
-  async create(treatmentId: string, snapshot: any, changeReason: string, currentUser: any) {
+  async create(treatmentId: string, snapshot: unknown, changeReason: string, currentUser: CurrentUser) {
     const lastVersion = await this.prisma.treatmentVersion.findFirst({
       where: { treatmentId },
       orderBy: { versionNumber: 'desc' },

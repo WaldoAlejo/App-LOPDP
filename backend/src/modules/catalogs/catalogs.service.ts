@@ -17,52 +17,52 @@ const VALID_CATALOGS = [
   'risks',
 ];
 
+/** Prisma delegate type for catalog models */
+type PrismaModel = {
+  findMany: (args: unknown) => Promise<unknown[]>;
+  findUnique: (args: unknown) => Promise<unknown | null>;
+  create: (args: unknown) => Promise<unknown>;
+  update: (args: unknown) => Promise<unknown>;
+};
+
 @Injectable()
 export class CatalogsService {
   constructor(private prisma: PrismaService) {}
 
-  private getModel(type: string) {
+  private getModel(type: string): PrismaModel {
     if (!VALID_CATALOGS.includes(type)) {
       throw new BadRequestException('Tipo de catálogo no válido');
     }
-    const modelMap: Record<string, any> = {
-      'data-subject-types': this.prisma.dataSubjectType,
-      'data-categories': this.prisma.dataCategory,
-      'data-items': this.prisma.dataItem,
-      'legal-bases': this.prisma.legalBasis,
-      'third-party-types': this.prisma.thirdPartyType,
-      'third-parties': this.prisma.thirdParty,
-      'countries': this.prisma.country,
-      'security-measures': this.prisma.securityMeasure,
-      'retention-rules': this.prisma.retentionRule,
-      'lifecycle-phases': this.prisma.lifecyclePhase,
-      'risks': this.prisma.risk,
+    const modelMap: Record<string, PrismaModel> = {
+      'data-subject-types': this.prisma.dataSubjectType as unknown as PrismaModel,
+      'data-categories': this.prisma.dataCategory as unknown as PrismaModel,
+      'data-items': this.prisma.dataItem as unknown as PrismaModel,
+      'legal-bases': this.prisma.legalBasis as unknown as PrismaModel,
+      'third-party-types': this.prisma.thirdPartyType as unknown as PrismaModel,
+      'third-parties': this.prisma.thirdParty as unknown as PrismaModel,
+      'countries': this.prisma.country as unknown as PrismaModel,
+      'security-measures': this.prisma.securityMeasure as unknown as PrismaModel,
+      'retention-rules': this.prisma.retentionRule as unknown as PrismaModel,
+      'lifecycle-phases': this.prisma.lifecyclePhase as unknown as PrismaModel,
+      'risks': this.prisma.risk as unknown as PrismaModel,
     };
     return modelMap[type];
   }
 
   async findAll(type: string, companyId?: string) {
     const model = this.getModel(type);
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
-    // Modelos que tienen campo companyId en el schema
     const modelsWithCompanyId = [
-      'data-subject-types',
-      'data-categories',
-      'data-items',
-      'legal-bases',
-      'third-parties',
-      'security-measures',
-      'retention-rules',
-      'lifecycle-phases',
-      'risks',
+      'data-subject-types', 'data-categories', 'data-items', 'legal-bases',
+      'third-parties', 'security-measures', 'retention-rules', 'lifecycle-phases', 'risks',
     ];
 
     if (companyId && modelsWithCompanyId.includes(type)) {
       where.companyId = companyId;
     }
 
-    const include: any = {};
+    const include: Record<string, boolean> = {};
     if (type === 'data-items') include.dataCategory = true;
     if (type === 'third-parties') {
       include.country = true;
@@ -74,7 +74,7 @@ export class CatalogsService {
 
   async findOne(type: string, id: string) {
     const model = this.getModel(type);
-    const include: any = {};
+    const include: Record<string, boolean> = {};
     if (type === 'data-items') include.dataCategory = true;
     if (type === 'third-parties') {
       include.country = true;
@@ -101,63 +101,64 @@ export class CatalogsService {
 
   async toggleStatus(type: string, id: string) {
     const model = this.getModel(type);
-    const item = await this.findOne(type, id);
+    const item = await this.findOne(type, id) as Record<string, unknown>;
     return model.update({ where: { id }, data: { isActive: !item.isActive } });
   }
 
-  private buildData(type: string, dto: any) {
-    const data: any = {};
+  private buildData(type: string, dto: CreateCatalogItemDto | UpdateCatalogItemDto): Record<string, unknown> {
+    const data: Record<string, unknown> = {};
+    const input = dto as Record<string, unknown>;
 
-    if (dto.code !== undefined) data.code = dto.code;
-    if (dto.name !== undefined) data.name = dto.name;
-    if (dto.description !== undefined) data.description = dto.description;
-    if (dto.isActive !== undefined) data.isActive = dto.isActive;
-    if (dto.companyId !== undefined) data.companyId = dto.companyId;
+    if (input.code !== undefined) data.code = input.code;
+    if (input.name !== undefined) data.name = input.name;
+    if (input.description !== undefined) data.description = input.description;
+    if (input.isActive !== undefined) data.isActive = input.isActive;
+    if (input.companyId !== undefined) data.companyId = input.companyId;
 
     switch (type) {
       case 'data-categories':
-        if (dto.isSpecialCategory !== undefined) data.isSpecialCategory = dto.isSpecialCategory;
+        if (input.isSpecialCategory !== undefined) data.isSpecialCategory = input.isSpecialCategory;
         break;
       case 'data-items':
-        if (dto.dataCategoryId !== undefined) data.dataCategoryId = dto.dataCategoryId;
-        if (dto.isSensitive !== undefined) data.isSensitive = dto.isSensitive;
+        if (input.dataCategoryId !== undefined) data.dataCategoryId = input.dataCategoryId;
+        if (input.isSensitive !== undefined) data.isSensitive = input.isSensitive;
         break;
       case 'legal-bases':
-        if (dto.legalReference !== undefined) data.legalReference = dto.legalReference;
+        if (input.legalReference !== undefined) data.legalReference = input.legalReference;
         break;
       case 'security-measures':
       case 'risks':
-        if (dto.category !== undefined) data.category = dto.category;
+        if (input.category !== undefined) data.category = input.category;
         break;
       case 'retention-rules':
-        if (dto.defaultTerm !== undefined) data.defaultTerm = dto.defaultTerm;
-        if (dto.legalReference !== undefined) data.legalReference = dto.legalReference;
+        if (input.defaultTerm !== undefined) data.defaultTerm = input.defaultTerm;
+        if (input.legalReference !== undefined) data.legalReference = input.legalReference;
         break;
       case 'lifecycle-phases':
-        if (dto.orderIndex !== undefined) data.orderIndex = dto.orderIndex;
+        if (input.orderIndex !== undefined) data.orderIndex = input.orderIndex;
         break;
       case 'countries':
-        if (dto.isoCode !== undefined) data.isoCode = dto.isoCode;
-        if (dto.region !== undefined) data.region = dto.region;
+        if (input.isoCode !== undefined) data.isoCode = input.isoCode;
+        if (input.region !== undefined) data.region = input.region;
         break;
       case 'risks':
-        if (dto.severity !== undefined) data.severity = dto.severity;
+        if (input.severity !== undefined) data.severity = input.severity;
         break;
       case 'third-parties':
-        if (dto.identificationNumber !== undefined) data.identificationNumber = dto.identificationNumber;
-        if (dto.countryId !== undefined) data.countryId = dto.countryId;
-        if (dto.thirdPartyTypeId !== undefined) data.thirdPartyTypeId = dto.thirdPartyTypeId;
-        if (dto.legalAddress !== undefined) data.legalAddress = dto.legalAddress;
-        if (dto.contactName !== undefined) data.contactName = dto.contactName;
-        if (dto.contactEmail !== undefined) data.contactEmail = dto.contactEmail;
-        if (dto.contactPhone !== undefined) data.contactPhone = dto.contactPhone;
-        if (dto.actsAsProcessor !== undefined) data.actsAsProcessor = dto.actsAsProcessor;
-        if (dto.actsAsRecipient !== undefined) data.actsAsRecipient = dto.actsAsRecipient;
-        if (dto.actsAsJointController !== undefined) data.actsAsJointController = dto.actsAsJointController;
-        if (dto.contractExists !== undefined) data.contractExists = dto.contractExists;
-        if (dto.confidentialityAgreementExists !== undefined) data.confidentialityAgreementExists = dto.confidentialityAgreementExists;
-        if (dto.usesSubprocessors !== undefined) data.usesSubprocessors = dto.usesSubprocessors;
-        if (dto.notes !== undefined) data.notes = dto.notes;
+        if (input.identificationNumber !== undefined) data.identificationNumber = input.identificationNumber;
+        if (input.countryId !== undefined) data.countryId = input.countryId;
+        if (input.thirdPartyTypeId !== undefined) data.thirdPartyTypeId = input.thirdPartyTypeId;
+        if (input.legalAddress !== undefined) data.legalAddress = input.legalAddress;
+        if (input.contactName !== undefined) data.contactName = input.contactName;
+        if (input.contactEmail !== undefined) data.contactEmail = input.contactEmail;
+        if (input.contactPhone !== undefined) data.contactPhone = input.contactPhone;
+        if (input.actsAsProcessor !== undefined) data.actsAsProcessor = input.actsAsProcessor;
+        if (input.actsAsRecipient !== undefined) data.actsAsRecipient = input.actsAsRecipient;
+        if (input.actsAsJointController !== undefined) data.actsAsJointController = input.actsAsJointController;
+        if (input.contractExists !== undefined) data.contractExists = input.contractExists;
+        if (input.confidentialityAgreementExists !== undefined) data.confidentialityAgreementExists = input.confidentialityAgreementExists;
+        if (input.usesSubprocessors !== undefined) data.usesSubprocessors = input.usesSubprocessors;
+        if (input.notes !== undefined) data.notes = input.notes;
         break;
     }
 

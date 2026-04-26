@@ -2,6 +2,12 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailConfigService } from '../email-config/email-config.service';
+import type { CurrentUser } from '../../common/interfaces/current-user.interface';
+
+interface ObservationInfo {
+  sectionCode: string;
+  message: string;
+}
 
 @Injectable()
 export class NotificationService {
@@ -50,14 +56,15 @@ export class NotificationService {
       });
 
       return true;
-    } catch (error: any) {
-      this.logger.error(`Error enviando correo a ${to}: ${error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Error desconocido';
+      this.logger.error(`Error enviando correo a ${to}: ${message}`);
       return false;
     }
   }
 
   // ─── NOTIFICACIÓN: Nueva observación ───
-  async notifyNewObservation(treatmentId: string, observation: any, creatorUser: any) {
+  async notifyNewObservation(treatmentId: string, observation: ObservationInfo, creatorUser: CurrentUser) {
     const treatment = await this.prisma.treatment.findUnique({
       where: { id: treatmentId },
       include: { company: true },
@@ -127,7 +134,7 @@ export class NotificationService {
   }
 
   // ─── NOTIFICACIÓN: Cambio de estado ───
-  async notifyStatusChange(treatmentId: string, newStatus: string, comment?: string, changedBy?: any) {
+  async notifyStatusChange(treatmentId: string, newStatus: string, comment?: string, changedBy?: CurrentUser) {
     const treatment = await this.prisma.treatment.findUnique({
       where: { id: treatmentId },
       include: { company: true },
@@ -229,7 +236,7 @@ export class NotificationService {
   }
 
   // ─── NOTIFICACIÓN: Observación resuelta ───
-  async notifyObservationResolved(observationId: string, resolverUser: any) {
+  async notifyObservationResolved(observationId: string, resolverUser: CurrentUser) {
     const observation = await this.prisma.observation.findUnique({
       where: { id: observationId },
       include: { treatment: { include: { company: true } } },

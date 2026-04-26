@@ -648,7 +648,7 @@ model RefreshToken {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
   token     String   @unique
-  tokenHash String   @map("token_hash")
+  tokenHash String?  @map("token_hash")
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
 

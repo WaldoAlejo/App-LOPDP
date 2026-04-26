@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, APP_INTERCEPTOR, APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './modules/prisma/prisma.module';
@@ -27,7 +28,17 @@ import { SanitizePipe } from './common/pipes/sanitize.pipe';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [
+        join(process.cwd(), '.env.local'),
+        join(process.cwd(), '.env'),
+        join(__dirname, '..', '.env.local'),
+        join(__dirname, '..', '.env'),
+        join(__dirname, '..', '..', '.env.local'),
+        join(__dirname, '..', '..', '.env'),
+      ],
+    }),
     // Rate limiting: 10 requests per second, 100 per minute globally
     // Stricter for auth endpoints: 5 per 15 seconds
     ThrottlerModule.forRoot([

@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -68,6 +69,20 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     maxAge: 86400,
   });
+
+  // Cookie parser (required before JWT strategy reads cookies)
+  app.use(cookieParser());
+
+  // Force HTTPS redirect in production
+  if (process.env.NODE_ENV === 'production') {
+    app.use((req: any, res: any, next: any) => {
+      const forwardedProto = req.headers['x-forwarded-proto'];
+      if (forwardedProto && forwardedProto !== 'https') {
+        return res.redirect(301, `https://${req.headers.host}${req.url}`);
+      }
+      next();
+    });
+  }
 
   // Global validation pipe
   app.useGlobalPipes(

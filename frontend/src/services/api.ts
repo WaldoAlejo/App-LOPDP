@@ -21,13 +21,8 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-// Request interceptor: add auth token
+// Request interceptor: add security headers
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = localStorage.getItem('access_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  // Add security headers
   config.headers['X-Requested-With'] = 'XMLHttpRequest';
   return config;
 });
@@ -35,12 +30,12 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 let isRefreshing = false;
 let failedQueue: { resolve: (value: unknown) => void; reject: (reason?: any) => void }[] = [];
 
-const processQueue = (error: any, token: string | null = null) => {
+const processQueue = (error: any) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
     } else {
-      prom.resolve(token);
+      prom.resolve(undefined);
     }
   });
   failedQueue = [];
@@ -62,31 +57,19 @@ api.interceptors.response.use(
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return api(originalRequest);
-          })
+          .then(() => api(originalRequest))
           .catch((err) => Promise.reject(err));
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem('refresh_token');
-      if (!refreshToken) {
-        useAuthStore.getState().logout();
-        window.location.href = '/login';
-        return Promise.reject(error);
-      }
-
       try {
-        const tokens = await authService.refresh(refreshToken);
-        useAuthStore.getState().setTokens(tokens);
-        processQueue(null, tokens.accessToken);
-        originalRequest.headers.Authorization = `Bearer ${tokens.accessToken}`;
+        await authService.refresh();
+        processQueue(null);
         return api(originalRequest);
       } catch (err) {
-        processQueue(err, null);
+        processQueue(err);
         useAuthStore.getState().logout();
         window.location.href = '/login';
         return Promise.reject(err);

@@ -8,7 +8,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: authService.login,
     onSuccess: (data) => {
-      setAuth(data.user, data.tokens);
+      setAuth(data.user);
     },
   });
 }

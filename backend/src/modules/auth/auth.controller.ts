@@ -1,10 +1,9 @@
-import { Controller, Post, Body, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
-import type { Request as ExpressRequest } from 'express';
+import { Controller, Post, Body, UseGuards, Request, Response, HttpCode, HttpStatus } from '@nestjs/common';
+import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { Public } from '../../common/decorators/public.decorator';
 import { LoginDto } from './dto/login.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -14,26 +13,62 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  private getCookieOptions(maxAgeMs: number): any {
+    const isProduction = process.env.NODE_ENV === 'production';
+    return {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'strict' as const,
+      maxAge: maxAgeMs,
+      path: '/',
+    };
+  }
+
   @Public()
   @Post('login')
   @Throttle({ default: { limit: 5, ttl: 15000 } }) // 5 intentos cada 15 segundos
   @HttpCode(HttpStatus.OK)
-  async login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  async login(
+    @Body() dto: LoginDto,
+    @Response({ passthrough: true }) res: ExpressResponse,
+  ) {
+    const result = await this.authService.login(dto);
+    const accessMaxAge = 15 * 60 * 1000; // 15m
+    const refreshMaxAge = 7 * 24 * 60 * 60 * 1000; // 7d
+    res.cookie('access_token', result.tokens.accessToken, this.getCookieOptions(accessMaxAge));
+    res.cookie('refresh_token', result.tokens.refreshToken, this.getCookieOptions(refreshMaxAge));
+    return { user: result.user };
   }
 
   @Public()
   @Post('refresh')
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 refresh por minuto
   @HttpCode(HttpStatus.OK)
-  async refresh(@Body() dto: RefreshTokenDto) {
-    return this.authService.refresh(dto);
+  async refresh(
+    @Request() req: ExpressRequest,
+    @Response({ passthrough: true }) res: ExpressResponse,
+  ) {
+    const refreshToken = req.cookies?.refresh_token;
+    if (!refreshToken) {
+      return { message: 'No refresh token' };
+    }
+    const tokens = await this.authService.refresh(refreshToken);
+    const accessMaxAge = 15 * 60 * 1000; // 15m
+    const refreshMaxAge = 7 * 24 * 60 * 60 * 1000; // 7d
+    res.cookie('access_token', tokens.accessToken, this.getCookieOptions(accessMaxAge));
+    res.cookie('refresh_token', tokens.refreshToken, this.getCookieOptions(refreshMaxAge));
+    return { message: 'Token refrescado' };
   }
 
   @Post('logout')
   @SkipThrottle()
   @HttpCode(HttpStatus.OK)
-  async logout(@Request() req: ExpressRequest & { user: { sub: string } }) {
+  async logout(
+    @Request() req: ExpressRequest & { user: { sub: string } },
+    @Response({ passthrough: true }) res: ExpressResponse,
+  ) {
+    res.clearCookie('access_token', { path: '/', httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
+    res.clearCookie('refresh_token', { path: '/', httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
     return this.authService.logout(req.user.sub);
   }
 

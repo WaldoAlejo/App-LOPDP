@@ -6,7 +6,6 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import { AuditService } from '../audit/audit.service';
 import { LoginDto } from './dto/login.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -71,16 +70,16 @@ export class AuthService {
     };
   }
 
-  async refresh(dto: RefreshTokenDto) {
+  async refresh(refreshToken: string) {
     try {
-      const payload = this.jwt.verify(dto.refreshToken, {
+      const payload = this.jwt.verify(refreshToken, {
         secret: this.config.get('JWT_REFRESH_SECRET'),
         issuer: this.jwtIssuer,
         audience: this.jwtAudience,
       });
 
       // Verify token hash in database (store only hash, not raw token)
-      const tokenHash = await this.hashToken(dto.refreshToken);
+      const tokenHash = await this.hashToken(refreshToken);
       const stored = await this.prisma.refreshToken.findFirst({
         where: { tokenHash, userId: payload.sub },
       });

@@ -1,4 +1,5 @@
 import { api } from './api';
+import { validateApiResponse, LoginResponseSchema } from '../schemas/api.schemas';
 
 export interface LoginDto {
   email: string;
@@ -15,10 +16,6 @@ export interface AuthResponse {
     companyId?: string;
     forcePasswordChange?: boolean;
   };
-  tokens: {
-    accessToken: string;
-    refreshToken: string;
-  };
 }
 
 export interface ChangePasswordDto {
@@ -27,8 +24,11 @@ export interface ChangePasswordDto {
 }
 
 export const authService = {
-  login: (dto: LoginDto) => api.post<AuthResponse>('/auth/login', dto).then(r => r.data),
-  refresh: (refreshToken: string) => api.post<AuthResponse['tokens']>('/auth/refresh', { refreshToken }).then(r => r.data),
+  login: async (dto: LoginDto) => {
+    const response = await api.post('/auth/login', dto);
+    return validateApiResponse(LoginResponseSchema, response.data, '/auth/login');
+  },
+  refresh: () => api.post('/auth/refresh').then(r => r.data),
   logout: () => api.post('/auth/logout'),
   forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
   resetPassword: (token: string, newPassword: string) => api.post('/auth/reset-password', { token, newPassword }),

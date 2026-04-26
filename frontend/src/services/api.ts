@@ -3,14 +3,12 @@ import { authService } from './auth.service';
 import { useAuthStore } from '../store/authStore';
 import { sanitizePayload } from '../utils/sanitizePayload';
 
-const apiUrl = import.meta.env.VITE_API_URL;
-if (!apiUrl) {
-  throw new Error('VITE_API_URL no está configurada');
-}
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+const apiUrl = configuredApiUrl || (import.meta.env.DEV ? 'http://localhost:3001/api' : '/api');
 
 // Validate API URL format
-if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
-  throw new Error('VITE_API_URL debe comenzar con http:// o https://');
+if (!apiUrl.startsWith('/') && !apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
+  throw new Error('VITE_API_URL debe comenzar con /, http:// o https://');
 }
 
 export const api = axios.create({

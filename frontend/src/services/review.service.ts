@@ -1,6 +1,10 @@
 import { api } from './api';
 import type { Treatment } from './treatment.service';
 
+interface PaginatedResponse<T> {
+  data: T[];
+}
+
 export interface Observation {
   id: string;
   treatmentId: string;
@@ -14,7 +18,7 @@ export interface Observation {
 
 export const reviewService = {
   getPendingTreatments: (params?: { companyId?: string }) =>
-    api.get<Treatment[]>('/treatments', { params: { ...params, status: 'enviado,en_revision_dpo,subsanado' } }).then(r => r.data),
+    api.get<Treatment[] | PaginatedResponse<Treatment>>('/treatments', { params: { ...params, status: 'enviado,en_revision_dpo,subsanado' } }).then(r => Array.isArray(r.data) ? r.data : r.data.data),
   getObservations: (treatmentId: string) =>
     api.get<Observation[]>(`/observations/treatment/${treatmentId}`).then(r => r.data),
   createObservation: (dto: { treatmentId: string; sectionCode: string; message: string }) =>

@@ -1,5 +1,17 @@
 import { api } from './api';
 
+interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
+}
+
 export interface Treatment {
   id: string;
   companyId: string;
@@ -229,9 +241,13 @@ export interface TreatmentCodePreview {
   sequence: number;
 }
 
+function extractTreatments(payload: Treatment[] | PaginatedResponse<Treatment>): Treatment[] {
+  return Array.isArray(payload) ? payload : payload.data;
+}
+
 export const treatmentService = {
   getAll: (params?: { companyId?: string; areaId?: string; status?: string; search?: string }) =>
-    api.get<Treatment[]>('/treatments', { params }).then(r => r.data),
+    api.get<Treatment[] | PaginatedResponse<Treatment>>('/treatments', { params }).then(r => extractTreatments(r.data)),
   getCodePreview: (params: { areaId: string; processId: string; treatmentId?: string }) =>
     api.get<TreatmentCodePreview>('/treatments/code-preview', { params }).then(r => r.data),
   getOne: (id: string) => api.get<Treatment>(`/treatments/${id}`).then(r => r.data),

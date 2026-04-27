@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { sanitizePayload } from '../utils/sanitizePayload';
 
 const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
-const apiUrl = configuredApiUrl || (import.meta.env.DEV ? 'http://localhost:3001/api' : '/api');
+const apiUrl = configuredApiUrl || (import.meta.env.DEV ? 'http://localhost:3001/api/v1' : '/api/v1');
 
 // Validate API URL format
 if (!apiUrl.startsWith('/') && !apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {

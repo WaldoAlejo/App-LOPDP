@@ -13,11 +13,20 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 export class AuthController {
   constructor(private authService: AuthService) {}
 
+  private shouldUseSecureCookies(): boolean {
+    if (process.env.FORCE_HTTPS === 'true') {
+      return true;
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL;
+    return typeof frontendUrl === 'string' && frontendUrl.startsWith('https://');
+  }
+
   private getCookieOptions(maxAgeMs: number): any {
-    const isProduction = process.env.NODE_ENV === 'production';
+    const useSecureCookies = this.shouldUseSecureCookies();
     return {
       httpOnly: true,
-      secure: isProduction,
+      secure: useSecureCookies,
       sameSite: 'strict' as const,
       maxAge: maxAgeMs,
       path: '/',
@@ -67,8 +76,9 @@ export class AuthController {
     @Request() req: ExpressRequest & { user: { sub: string } },
     @Response({ passthrough: true }) res: ExpressResponse,
   ) {
-    res.clearCookie('access_token', { path: '/', httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
-    res.clearCookie('refresh_token', { path: '/', httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' });
+    const useSecureCookies = this.shouldUseSecureCookies();
+    res.clearCookie('access_token', { path: '/', httpOnly: true, secure: useSecureCookies, sameSite: 'strict' });
+    res.clearCookie('refresh_token', { path: '/', httpOnly: true, secure: useSecureCookies, sameSite: 'strict' });
     return this.authService.logout(req.user.sub);
   }
 

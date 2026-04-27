@@ -78,11 +78,12 @@ export class AuthService {
         audience: this.jwtAudience,
       });
 
-      // Verify token hash in database (store only hash, not raw token)
-      const tokenHash = await this.hashToken(refreshToken);
-      const stored = await this.prisma.refreshToken.findFirst({
-        where: { tokenHash, userId: payload.sub },
+      const storedTokens = await this.prisma.refreshToken.findMany({
+        where: { userId: payload.sub },
+        orderBy: { createdAt: 'desc' },
       });
+
+      const stored = await this.findStoredRefreshToken(storedTokens, refreshToken);
 
       if (!stored || stored.userId !== payload.sub || stored.expiresAt < new Date()) {
         throw new UnauthorizedException('Refresh token inválido');
@@ -233,6 +234,27 @@ export class AuthService {
 
   private async hashToken(token: string): Promise<string> {
     return bcrypt.hash(token, 12);
+  }
+
+  private async findStoredRefreshToken(
+    storedTokens: Array<{ id: string; userId: string; token: string; tokenHash: string | null; expiresAt: Date }>,
+    refreshToken: string,
+  ) {
+    for (const storedToken of storedTokens) {
+      if (storedToken.tokenHash) {
+        const isMatch = await bcrypt.compare(refreshToken, storedToken.tokenHash);
+        if (isMatch) {
+          return storedToken;
+        }
+        continue;
+      }
+
+      if (storedToken.token === refreshToken) {
+        return storedToken;
+      }
+    }
+
+    return null;
   }
 
   private parseDuration(duration: string): number {

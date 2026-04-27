@@ -10,7 +10,7 @@ import { CreateTreatmentDto } from './dto/create-treatment.dto';
 import { UpdateTreatmentDto } from './dto/update-treatment.dto';
 import { ChangeStatusDto } from './dto/change-status.dto';
 import { EvaluateRiskDto } from './dto/evaluate-risk.dto';
-import { PaginationDto } from '../../common/dto/pagination.dto';
+import { ListTreatmentsQueryDto } from './dto/list-treatments-query.dto';
 
 @Controller('treatments')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -23,13 +23,16 @@ export class TreatmentsController {
   @Get()
   findAll(
     @CurrentUser() currentUser: CurrentUserType,
-    @Query() query: PaginationDto,
-    @Query('companyId') companyId?: string,
-    @Query('areaId') areaId?: string,
-    @Query('status') status?: string,
-    @Query('search') search?: string,
+    @Query() query: ListTreatmentsQueryDto,
   ) {
-    return this.treatmentsService.findAll(currentUser, { companyId, areaId, status, search, page: query.page, limit: query.limit });
+    return this.treatmentsService.findAll(currentUser, {
+      companyId: query.companyId,
+      areaId: query.areaId,
+      status: query.status,
+      search: query.search,
+      page: query.page,
+      limit: query.limit,
+    });
   }
 
   @Get('code-preview')

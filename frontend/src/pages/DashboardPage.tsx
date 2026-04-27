@@ -33,7 +33,7 @@ import { clsx } from 'clsx';
 
 function ChartContainer({ children }: { children: ReactNode }) {
   return (
-    <div className="h-64 min-w-0">
+    <div className="h-64 w-full min-w-0 min-h-[16rem]">
       <ResponsiveContainer width="100%" height="100%">
         {children as any}
       </ResponsiveContainer>

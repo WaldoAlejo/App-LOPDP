@@ -73,8 +73,8 @@ async function bootstrap() {
   // Cookie parser (required before JWT strategy reads cookies)
   app.use(cookieParser());
 
-  // Force HTTPS redirect in production
-  if (process.env.NODE_ENV === 'production') {
+  // Only force HTTPS when the deployment explicitly enables it.
+  if (process.env.NODE_ENV === 'production' && process.env.FORCE_HTTPS === 'true') {
     app.use((req: any, res: any, next: any) => {
       const forwardedProto = req.headers['x-forwarded-proto'];
       if (forwardedProto && forwardedProto !== 'https') {

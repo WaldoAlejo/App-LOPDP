@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build": "nest build",
+    "db:validate": "ts-node scripts/validate-db.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "import:servientrega": "ts-node scripts/import-servientrega-contacts.ts",
     "start": "nest start",

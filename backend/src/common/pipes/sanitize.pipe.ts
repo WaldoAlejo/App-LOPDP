@@ -39,6 +39,17 @@ export class SanitizePipe implements PipeTransform {
     const trimmed = value.trim();
     // Use sanitize-html to strip ALL HTML tags (allowedTags: [])
     // This prevents all XSS vectors including encoded, nested, and obfuscated payloads
-    return sanitizeHtml(trimmed, this.sanitizeOptions);
+    const sanitized = sanitizeHtml(trimmed, this.sanitizeOptions);
+    // sanitize-html HTML-entity-encodes the remaining text (it assumes the output
+    // will be rendered as HTML). Since all tags were already stripped above, decoding
+    // entities here is safe and prevents plain text like "A & B" from being corrupted
+    // to "A &amp; B" in storage.
+    // Decode &amp; last so a literal "&lt;" the user typed doesn't get double-unescaped into "<".
+    return sanitized
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#0*39;|&apos;/g, "'")
+      .replace(/&amp;/g, '&');
   }
 }

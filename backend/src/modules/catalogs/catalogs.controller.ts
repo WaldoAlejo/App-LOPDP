@@ -31,7 +31,8 @@ export class CatalogsController {
   @Post(':type')
   @Roles('SUPER_ADMIN', 'COMPANY_ADMIN', 'DPO')
   create(@Param('type') type: string, @Body() dto: CreateCatalogItemDto, @CurrentUser() currentUser: CurrentUserType) {
-    if (currentUser.roleCode !== 'SUPER_ADMIN' && dto.companyId === undefined) {
+    const globalCatalogs = ['third-party-types', 'countries'];
+    if (currentUser.roleCode !== 'SUPER_ADMIN' && dto.companyId === undefined && !globalCatalogs.includes(type)) {
       (dto as CreateCatalogItemDto & { companyId?: string }).companyId = currentUser.companyId;
     }
     return this.catalogsService.create(type, dto);

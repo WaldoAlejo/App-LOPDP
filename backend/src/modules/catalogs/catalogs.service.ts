@@ -109,9 +109,9 @@ export class CatalogsService {
     const data: Record<string, unknown> = {};
     const input = dto as Record<string, unknown>;
 
-    if (input.code !== undefined) data.code = input.code;
+    if (type !== 'third-parties' && input.code !== undefined) data.code = input.code;
     if (input.name !== undefined) data.name = input.name;
-    if (input.description !== undefined) data.description = input.description;
+    if (type !== 'third-parties' && input.description !== undefined) data.description = input.description;
     if (input.isActive !== undefined) data.isActive = input.isActive;
     if (input.companyId !== undefined) data.companyId = input.companyId;
 

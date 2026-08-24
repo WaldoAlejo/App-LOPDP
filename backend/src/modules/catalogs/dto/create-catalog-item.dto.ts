@@ -1,8 +1,9 @@
 import { IsString, IsOptional, IsBoolean, IsUUID, IsInt } from 'class-validator';
 
 export class CreateCatalogItemDto {
+  @IsOptional()
   @IsString()
-  code: string;
+  code?: string;
 
   @IsString()
   name: string;
